@@ -1,0 +1,47 @@
+name: daily-pipeline
+
+# Pipeline quotidien Funding Watch :
+#   1. Scrape les sources actives  -> opportunities (status='draft')
+#   2. Backfill taxonomie          -> opp_sdg_goals / opp_dac_sectors / opp_target_populations
+#   3. Backfill embeddings         -> organizations.embedding + opportunities.embedding
+#
+# Secrets requis (Settings > Secrets and variables > Actions) :
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CRON_SECRET, NEXT_PUBLIC_APP_URL,
+#   ANTHROPIC_API_KEY  (sinon backfill taxonomy = fallback heuristique)
+#   OPENAI_API_KEY     (sinon backfill embeddings = fallback hash deterministe)
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # tous les jours a 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_MODEL: claude-haiku-4-5-20251001
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r scrapers/requirements.txt
+
+      - name: 1/3 Scrape sources
+        run: python scrapers/scraper.py
+
+      - name: 2/3 Backfill taxonomy
+        if: always()
+        run: python scrapers/backfill_taxonomy.py --limit 100
+
+      - name: 3/3 Backfill embeddings
+        if: always()
+        run: python scrapers/backfill_embeddings.py --limit 200

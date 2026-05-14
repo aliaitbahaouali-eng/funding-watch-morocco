@@ -1,0 +1,11 @@
+node_modules
+.next/cache
+.env.local
+.env
+*.log
+scrapers/logs
+scrapers/__pycache__
+**/__pycache__
+*.pyc
+.vercel
+_inject_schema.tmp.js

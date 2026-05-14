@@ -1,0 +1,350 @@
+{
+  "_description": "Configuration de référence des sources de veille Funding Watch Morocco. À synchroniser avec la table `sources` Supabase via `seed_sources_v2.sql`.",
+  "_categories": {
+    "maroc": "Sources gouvernementales et plateformes marocaines",
+    "un": "Agences des Nations Unies",
+    "eu": "Union Européenne et programmes EuropeAid",
+    "cooperation": "Agences bilatérales de coopération",
+    "ngo_platform": "Plateformes aggregator pour ONG",
+    "foundation": "Fondations privées internationales",
+    "embassy": "Ambassades et instituts culturels au Maroc"
+  },
+  "sources": [
+    {
+      "key": "tanmia",
+      "name": "Tanmia.ma",
+      "url": "https://www.tanmia.ma",
+      "category": "maroc",
+      "country": "MA",
+      "language": "fr",
+      "frequency": "daily",
+      "priority": 1,
+      "parser_key": "tanmia",
+      "reliability_score": 95,
+      "tags": ["maroc", "ong", "société civile"]
+    },
+    {
+      "key": "emploi_public_ma",
+      "name": "Emploi Public Maroc",
+      "url": "https://www.emploi-public.ma",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 80
+    },
+    {
+      "key": "indh",
+      "name": "INDH — Initiative Nationale pour le Développement Humain",
+      "url": "https://www.indh.ma",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "weekly", "priority": 1, "parser_key": "indh", "reliability_score": 90
+    },
+    {
+      "key": "maroc_gov",
+      "name": "Portail national Maroc",
+      "url": "https://www.maroc.ma",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 70
+    },
+    {
+      "key": "mcinet",
+      "name": "Ministère de l'Industrie et du Commerce",
+      "url": "https://www.mcinet.gov.ma",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 75
+    },
+    {
+      "key": "agriculture_ma",
+      "name": "Ministère de l'Agriculture",
+      "url": "https://www.agriculture.gov.ma",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 75
+    },
+
+    {
+      "key": "undp",
+      "name": "UNDP Procurement Notices",
+      "url": "https://procurement-notices.undp.org/",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "daily", "priority": 1, "parser_key": "undp", "reliability_score": 100
+    },
+    {
+      "key": "unicef",
+      "name": "UNICEF",
+      "url": "https://www.unicef.org/about/employ/",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "unicef", "reliability_score": 95
+    },
+    {
+      "key": "un_women",
+      "name": "UN Women Procurement",
+      "url": "https://www.unwomen.org/en/about-us/procurement",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 1, "parser_key": "un_women", "reliability_score": 100, "tags": ["femmes", "genre"]
+    },
+    {
+      "key": "fao",
+      "name": "FAO Procurement",
+      "url": "https://www.fao.org/unfao/procurement/en/",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 95, "tags": ["rural", "agriculture"]
+    },
+    {
+      "key": "unesco",
+      "name": "UNESCO",
+      "url": "https://www.unesco.org/en/calls-applications",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["culture", "education"]
+    },
+    {
+      "key": "iom",
+      "name": "IOM — International Organization for Migration",
+      "url": "https://www.iom.int/calls-proposals",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["migration"]
+    },
+    {
+      "key": "wfp",
+      "name": "WFP — World Food Programme",
+      "url": "https://www.wfp.org/procurement",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 90
+    },
+    {
+      "key": "unhcr",
+      "name": "UNHCR",
+      "url": "https://www.unhcr.org/procurement",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 90, "tags": ["migration", "refugies"]
+    },
+    {
+      "key": "unfpa",
+      "name": "UNFPA",
+      "url": "https://www.unfpa.org/procurement-opportunities",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 90, "tags": ["sante", "femmes"]
+    },
+
+    {
+      "key": "eu_funding",
+      "name": "EU Funding & Tenders Portal",
+      "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-search",
+      "category": "eu", "country": "EU", "language": "en",
+      "frequency": "daily", "priority": 1, "parser_key": "eu_funding", "reliability_score": 100
+    },
+    {
+      "key": "intpa",
+      "name": "International Partnerships (EU)",
+      "url": "https://international-partnerships.ec.europa.eu/funding-and-technical-assistance_en",
+      "category": "eu", "country": "EU", "language": "en",
+      "frequency": "weekly", "priority": 1, "parser_key": "html_smart", "reliability_score": 95
+    },
+    {
+      "key": "erasmus_plus",
+      "name": "Erasmus+",
+      "url": "https://erasmus-plus.ec.europa.eu/opportunities",
+      "category": "eu", "country": "EU", "language": "en",
+      "frequency": "monthly", "priority": 2, "parser_key": "html_smart", "reliability_score": 95, "tags": ["education", "jeunes"]
+    },
+
+    {
+      "key": "giz",
+      "name": "GIZ",
+      "url": "https://www.giz.de/en/aboutgiz/business_opportunities.html",
+      "category": "cooperation", "country": "DE", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "giz", "reliability_score": 90
+    },
+    {
+      "key": "afd",
+      "name": "AFD — Appels à projets",
+      "url": "https://www.afd.fr/fr/appels-a-projets",
+      "category": "cooperation", "country": "FR", "language": "fr",
+      "frequency": "weekly", "priority": 1, "parser_key": "afd", "reliability_score": 95
+    },
+    {
+      "key": "enabel",
+      "name": "Enabel",
+      "url": "https://www.enabel.be/fr/appels-a-projets/",
+      "category": "cooperation", "country": "BE", "language": "fr",
+      "frequency": "weekly", "priority": 2, "parser_key": "enabel", "reliability_score": 90
+    },
+    {
+      "key": "usaid",
+      "name": "USAID Morocco",
+      "url": "https://www.usaid.gov/morocco/work-with-usaid/funding-opportunities",
+      "category": "cooperation", "country": "US", "language": "en",
+      "frequency": "weekly", "priority": 1, "parser_key": "usaid", "reliability_score": 95
+    },
+    {
+      "key": "sida",
+      "name": "SIDA — Coopération Suède",
+      "url": "https://www.sida.se/en/for-partners/calls-for-proposals",
+      "category": "cooperation", "country": "SE", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85
+    },
+    {
+      "key": "jica",
+      "name": "JICA — Coopération Japon",
+      "url": "https://www.jica.go.jp/english/our_work/types_of_assistance/grant/index.html",
+      "category": "cooperation", "country": "JP", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85
+    },
+    {
+      "key": "eda_ch",
+      "name": "DDC — Coopération Suisse",
+      "url": "https://www.eda.admin.ch/deza/en/home/themes-sdc.html",
+      "category": "cooperation", "country": "CH", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85
+    },
+
+    {
+      "key": "fundsforngos",
+      "name": "fundsforNGOs (RSS)",
+      "url": "https://www2.fundsforngos.org/feed/",
+      "category": "ngo_platform", "country": "International", "language": "en",
+      "frequency": "daily", "priority": 2, "parser_key": "fundsforngos", "reliability_score": 85, "tags": ["aggregator"]
+    },
+    {
+      "key": "developmentaid",
+      "name": "DevelopmentAid",
+      "url": "https://www.developmentaid.org/news-stream/grants",
+      "category": "ngo_platform", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 80
+    },
+    {
+      "key": "devex",
+      "name": "Devex Funding",
+      "url": "https://www.devex.com/news",
+      "category": "ngo_platform", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 3, "parser_key": "html_smart", "reliability_score": 75
+    },
+    {
+      "key": "candid",
+      "name": "Candid",
+      "url": "https://candid.org/find-funding",
+      "category": "ngo_platform", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 4, "parser_key": "html_smart", "reliability_score": 70
+    },
+
+    {
+      "key": "gates",
+      "name": "Bill & Melinda Gates Foundation",
+      "url": "https://www.gatesfoundation.org/about/committed-grants",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 90
+    },
+    {
+      "key": "rockefeller",
+      "name": "Rockefeller Foundation",
+      "url": "https://www.rockefellerfoundation.org/grants/",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85
+    },
+    {
+      "key": "opensociety",
+      "name": "Open Society Foundations",
+      "url": "https://www.opensocietyfoundations.org/grants",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["droits-humains"]
+    },
+    {
+      "key": "ford",
+      "name": "Ford Foundation",
+      "url": "https://www.fordfoundation.org/work/our-grants/grants-database/",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85
+    },
+    {
+      "key": "mastercard",
+      "name": "Mastercard Foundation",
+      "url": "https://mastercardfdn.org/programs/",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85, "tags": ["jeunes"]
+    },
+    {
+      "key": "mott",
+      "name": "Charles Stewart Mott Foundation",
+      "url": "https://www.mott.org/grantees/",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 4, "parser_key": "html_smart", "reliability_score": 80
+    },
+    {
+      "key": "drosos",
+      "name": "Fondation Drosos",
+      "url": "https://drosos.org/en/our-projects/",
+      "category": "foundation", "country": "CH", "language": "en",
+      "frequency": "monthly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["mena", "maroc"]
+    },
+
+    {
+      "key": "british_council",
+      "name": "British Council Morocco",
+      "url": "https://www.britishcouncil.ma/en/programmes",
+      "category": "embassy", "country": "UK", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 80, "tags": ["culture", "education"]
+    },
+    {
+      "key": "goethe_ma",
+      "name": "Goethe-Institut Maroc",
+      "url": "https://www.goethe.de/ins/ma/fr/kul.html",
+      "category": "embassy", "country": "DE", "language": "fr",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 80, "tags": ["culture"]
+    },
+    {
+      "key": "institut_francais_ma",
+      "name": "Institut Français du Maroc",
+      "url": "https://if-maroc.org/",
+      "category": "embassy", "country": "FR", "language": "fr",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 80, "tags": ["culture", "education"]
+    },
+
+    {
+      "_comment": "Sprint 2 — +15 sources prioritaires (seed_sources_v3.sql)",
+      "key": "oit",
+      "name": "OIT — Organisation Internationale du Travail",
+      "url": "https://www.ilo.org/about-ilo/procurement",
+      "category": "un", "country": "International", "language": "en",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 95, "tags": ["travail", "emploi", "ess"]
+    },
+    {
+      "key": "eu_ndici",
+      "name": "EU NDICI — Global Europe",
+      "url": "https://international-partnerships.ec.europa.eu/funding-and-technical-assistance_en",
+      "category": "eu", "country": "EU", "language": "en",
+      "frequency": "daily", "priority": 1, "parser_key": "html_smart", "reliability_score": 100, "tags": ["eu", "ndici", "global-europe"]
+    },
+    {
+      "key": "aecid",
+      "name": "AECID — Coopération Espagne",
+      "url": "https://www.aecid.es/es/convocatorias",
+      "category": "cooperation", "country": "ES", "language": "es",
+      "frequency": "weekly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["cooperation", "maroc", "mediterranee"]
+    },
+    {
+      "key": "koica",
+      "name": "KOICA — Coopération Corée",
+      "url": "https://www.koica.go.kr/koica_en/index.do",
+      "category": "cooperation", "country": "KR", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85, "tags": ["cooperation"]
+    },
+    {
+      "key": "bosch",
+      "name": "Robert Bosch Stiftung",
+      "url": "https://www.bosch-stiftung.de/en/funding",
+      "category": "foundation", "country": "DE", "language": "en",
+      "frequency": "monthly", "priority": 3, "parser_key": "html_smart", "reliability_score": 85, "tags": ["fondation", "société civile"]
+    },
+    {
+      "key": "aga_khan",
+      "name": "Aga Khan Foundation",
+      "url": "https://the.akdn/en/how-we-work/our-agencies/aga-khan-foundation",
+      "category": "foundation", "country": "International", "language": "en",
+      "frequency": "monthly", "priority": 2, "parser_key": "html_smart", "reliability_score": 90, "tags": ["fondation", "développement rural"]
+    },
+    {
+      "key": "fm5",
+      "name": "Fondation Mohammed V pour la Solidarité",
+      "url": "http://www.fm5.ma/",
+      "category": "maroc", "country": "MA", "language": "fr",
+      "frequency": "monthly", "priority": 2, "parser_key": "html_smart", "reliability_score": 85, "tags": ["maroc", "solidarité"]
+    }
+  ]
+}

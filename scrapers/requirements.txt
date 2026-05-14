@@ -1,0 +1,12 @@
+requests>=2.31
+beautifulsoup4>=4.12
+feedparser>=6.0
+python-dotenv>=1.0
+lxml>=5.0
+python-dateutil>=2.9
+# PDF extraction (deep crawler)
+pypdf>=4.0
+pdfminer.six>=20240706
+# Optionnel — uniquement pour les collectors qui en ont besoin (EU Funding portal)
+# Activez avec : pip install playwright && playwright install chromium
+playwright>=1.45

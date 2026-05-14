@@ -1,0 +1,25 @@
+# =============================================================
+# Funding Watch Morocco — Configuration Netlify
+# =============================================================
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_USE_NETLIFY_EDGE = "true"
+
+# Plugin officiel Next.js (adapte API routes en Netlify Functions)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Pas d'indexation pour les API routes
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+
+# Cron équivalent /api/cron (Netlify Scheduled Functions — voir doc)
+# Netlify n'a pas de cron natif comme Vercel — utiliser une scheduled function
+# Voir scrapers/.github/workflows/scrape.yml pour le scraping périodique

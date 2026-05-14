@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron?secret=use-x-cron-secret-header-instead",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/weekly?secret=use-x-cron-secret-header-instead&frequency=weekly",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/digest",
+      "schedule": "0 7 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "x-robots-tag", "value": "noindex" }
+      ]
+    }
+  ]
+}

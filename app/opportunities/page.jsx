@@ -1,0 +1,153 @@
+import Link from 'next/link';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import OpportunityCardPremium from '@/components/premium/OpportunityCardPremium';
+import OpportunityFilters from '@/components/opportunity/OpportunityFilters';
+import LiveBadge from '@/components/premium/LiveBadge';
+import AnimatedCounter from '@/components/premium/AnimatedCounter';
+import { createClient } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
+const PAGE_SIZE = 12;
+
+export default async function OpportunitiesPage({ searchParams }) {
+  const supabase = createClient();
+  const sp = searchParams || {};
+  const page = Math.max(1, parseInt(sp.page || '1'));
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const [{ data: themes }, { data: donors }] = await Promise.all([
+    supabase.from('themes').select('id, name_fr, slug').eq('active', true).order('name_fr'),
+    supabase.from('donors').select('id, name').order('name')
+  ]);
+
+  let oppIdsByTheme = null;
+  if (sp.theme && sp.theme !== 'all') {
+    const t = themes?.find((x) => x.slug === sp.theme);
+    if (t) {
+      const { data: links } = await supabase.from('opportunity_themes').select('opportunity_id').eq('theme_id', t.id);
+      oppIdsByTheme = (links || []).map((l) => l.opportunity_id);
+      if (oppIdsByTheme.length === 0) oppIdsByTheme = ['00000000-0000-0000-0000-000000000000'];
+    }
+  }
+
+  let query = supabase
+    .from('opportunities')
+    .select('*, donors(id, name), opportunity_themes(theme_id, themes(name_fr, slug))', { count: 'exact' })
+    .eq('status', 'published');
+
+  // ⭐ NGO-fit filter (S1) : par défaut on n'affiche que les opps pertinentes ONG
+  // (ngo_relevant=true) OU non encore classées (ngo_relevant IS NULL) pour ne rien cacher au début.
+  // Toggle ?all=1 pour bypasser (admin/debug)
+  if (sp.all !== '1') {
+    query = query.or('ngo_relevant.is.null,ngo_relevant.eq.true');
+  }
+
+  if (sp.q) query = query.or(`title.ilike.%${sp.q}%,summary.ilike.%${sp.q}%,description.ilike.%${sp.q}%`);
+  if (sp.donor && sp.donor !== 'all') query = query.eq('donor_id', sp.donor);
+  if (sp.morocco === '1') query = query.eq('morocco_eligible', true);
+  if (sp.verified === '1') query = query.eq('verified', true);
+  if (sp.difficulty && sp.difficulty !== 'all') query = query.eq('difficulty_level', sp.difficulty);
+  if (sp.deadline && sp.deadline !== 'all') {
+    const target = new Date();
+    target.setDate(target.getDate() + parseInt(sp.deadline));
+    query = query.lte('deadline', target.toISOString().slice(0, 10));
+  }
+  if (oppIdsByTheme) query = query.in('id', oppIdsByTheme);
+
+  const sort = sp.sort || 'deadline';
+  if (sort === 'deadline') query = query.order('deadline', { ascending: true, nullsFirst: false });
+  else if (sort === 'recent') query = query.order('published_at', { ascending: false, nullsFirst: false });
+  else if (sort === 'amount') query = query.order('amount_max', { ascending: false, nullsFirst: false });
+
+  query = query.range(from, to);
+  const { data: opportunities, count } = await query;
+  const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE));
+
+  // KPIs latéraux
+  const [{ count: morCount }, { count: verCount }] = await Promise.all([
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published').eq('morocco_eligible', true),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published').eq('verified', true)
+  ]);
+
+  return (
+    <main className="min-h-screen bg-ink-50">
+      <Header />
+
+      {/* Hero compact */}
+      <section className="relative overflow-hidden border-b border-ink-100 bg-white py-12">
+        <div className="absolute inset-0 bg-grid opacity-40" />
+        <div className="absolute -top-40 right-0 h-80 w-80 rounded-full bg-brand-500/15 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-6">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <LiveBadge label="Base d'opportunités" />
+                <span className="chip-brand">🇲🇦 Maroc éligible · {morCount ?? 0}</span>
+                <span className="chip-success">✓ Vérifiées · {verCount ?? 0}</span>
+              </div>
+              <h1 className="mt-4 font-display text-4xl font-black tracking-tight lg:text-5xl">
+                <AnimatedCounter value={count || 0} /> <span className="title-gradient">opportunités</span> en cours.
+              </h1>
+              <p className="mt-3 max-w-2xl text-base text-ink-500">
+                Filtrez, triez, sauvegardez. Les opportunités sont vérifiées et classées par thématique, deadline et niveau de difficulté.
+              </p>
+            </div>
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2 text-xs font-bold text-ink-500 shadow-card">
+              <kbd className="rounded-md bg-ink-100 px-1.5 py-0.5 font-mono text-2xs text-ink-600">⌘K</kbd>
+              <span>recherche rapide</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        {/* Filtres sticky */}
+        <div className="sticky top-[88px] z-30">
+          <OpportunityFilters themes={themes || []} donors={donors || []} />
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-sm font-bold text-ink-700">
+            {count ?? 0} résultat(s) <span className="text-ink-400">· page {page} sur {totalPages}</span>
+          </p>
+          <div className="flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-ink-500">
+            <span>Vue :</span>
+            <button className="rounded-md bg-ink-900 px-2.5 py-1 text-white">Grid</button>
+            <button className="rounded-md px-2.5 py-1 hover:bg-ink-100">List</button>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {(opportunities || []).map((item, i) => (
+            <OpportunityCardPremium key={item.id} item={{ ...item, score: 70 + (i % 30) }} variant={i === 0 ? 'highlight' : 'default'} />
+          ))}
+          {(!opportunities || opportunities.length === 0) && (
+            <div className="col-span-2 surface-elevated p-10 text-center">
+              <p className="font-display text-xl font-black text-ink-700">Aucun résultat</p>
+              <p className="mt-2 text-sm text-ink-500">Essayez d'élargir vos filtres ou lancez la collecte depuis le back-office admin.</p>
+              <Link href="/opportunities" className="btn-secondary mt-5 inline-flex text-2xs uppercase tracking-widest">Réinitialiser</Link>
+            </div>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <nav className="mt-12 flex justify-center gap-2">
+            {Array.from({ length: totalPages }).slice(0, 10).map((_, i) => {
+              const p = i + 1;
+              const next = new URLSearchParams(sp);
+              next.set('page', String(p));
+              const active = p === page;
+              return (
+                <a key={p} href={`?${next.toString()}`} className={`rounded-full px-4 py-2 text-sm font-bold transition ${active ? 'btn-primary' : 'bg-white text-ink-600 shadow-card hover:bg-ink-50'}`}>{p}</a>
+              );
+            })}
+          </nav>
+        )}
+      </section>
+
+      <Footer />
+    </main>
+  );
+}
