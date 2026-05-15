@@ -33,6 +33,53 @@ export default async function MonitoringPage() {
     ? Math.round(recentLogs.filter(l => l.status === 'success').length / recentLogs.length * 100)
     : 0;
 
+  // ============================================================
+  // Cost estimation (Sprint 3d — pas de tracking par appel pour l'instant,
+  // on estime depuis les counts × coûts unitaires connus).
+  // ============================================================
+  const [{ count: oppsEmbedded }, { count: orgsEmbedded }, { count: oppSdgTagged }, { count: ngoClassified }, { count: aiCowriterLogs }] = await Promise.all([
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('embedding_model', 'openai/text-embedding-3-small'),
+    supabase.from('organizations').select('id', { count: 'exact', head: true }).eq('embedding_model', 'openai/text-embedding-3-small'),
+    // distinct opportunity_id côté DB serait mieux mais PostgREST ne le supporte pas; on prend la rangée brute
+    supabase.from('opp_sdg_goals').select('opportunity_id', { count: 'exact', head: true }),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).not('ngo_relevance_score', 'is', null),
+    // proxy pour appels co-writer : pas encore tracké → 0
+    Promise.resolve({ count: 0 }),
+  ]);
+
+  // Coûts unitaires (en USD). Mis à jour 2026-05-15.
+  const UNIT = {
+    openai_embedding_small: 0.00001,    // ~500 tokens × $0.020/1M
+    claude_haiku_taxonomy: 0.0030,      // 2000 in + 100 out tokens
+    claude_haiku_ngo: 0.0015,           // 1000 in + 50 out tokens
+    claude_haiku_cowriter: 0.0050,      // 3000 in + 400 out tokens
+  };
+  const cost = {
+    openai: ((oppsEmbedded ?? 0) + (orgsEmbedded ?? 0)) * UNIT.openai_embedding_small,
+    claude_taxo: (oppSdgTagged ?? 0) * UNIT.claude_haiku_taxonomy / 3, // ~3 tags / call, on divise
+    claude_ngo: (ngoClassified ?? 0) * UNIT.claude_haiku_ngo,
+    claude_cowriter: (aiCowriterLogs ?? 0) * UNIT.claude_haiku_cowriter,
+  };
+  const totalCost = cost.openai + cost.claude_taxo + cost.claude_ngo + cost.claude_cowriter;
+
+  // Sources avec dernière erreur (top 5)
+  const failingSources = (sources || []).filter(s => s.last_error).slice(0, 5);
+
+  // Latence moyenne par source (depuis recentLogs)
+  const latencyBySource = {};
+  for (const l of (recentLogs || [])) {
+    if (!l.duration_ms) continue;
+    const name = l.sources?.name || l.source_name || 'Inconnu';
+    if (!latencyBySource[name]) latencyBySource[name] = { ms: 0, n: 0, items: 0 };
+    latencyBySource[name].ms += l.duration_ms;
+    latencyBySource[name].n += 1;
+    latencyBySource[name].items += l.items_found || 0;
+  }
+  const latencyRows = Object.entries(latencyBySource)
+    .map(([name, v]) => ({ name, avgMs: Math.round(v.ms / v.n), runs: v.n, items: v.items }))
+    .sort((a, b) => b.avgMs - a.avgMs)
+    .slice(0, 8);
+
   // Group by category
   const byCategory = {};
   for (const s of (sources || [])) {
@@ -73,6 +120,106 @@ export default async function MonitoringPage() {
         <StatTile label="Publiées" value={totalPublished} hint="après validation" icon="✓" />
         <StatTile label="Taux succès 15j" value={successRate} suffix="%" hint={`${errors24h} erreurs 24h`} icon="⚡" deltaPositive={errors24h === 0} delta={errors24h ? `${errors24h} erreurs` : 'aucune erreur'} />
       </div>
+
+      {/* Coûts API estimés */}
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="eyebrow">Coûts API estimés</p>
+            <h2 className="mt-2 font-display text-2xl font-black">~${totalCost.toFixed(4)} cumul à date</h2>
+          </div>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-2xs font-bold text-amber-700">
+            Estimation depuis counts × coûts unitaires (pas de tracking par appel)
+          </span>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <CostCard
+            label="OpenAI embeddings"
+            cost={cost.openai}
+            calls={(oppsEmbedded ?? 0) + (orgsEmbedded ?? 0)}
+            unit="text-embedding-3-small"
+            unitCost="$0.020/1M tokens"
+          />
+          <CostCard
+            label="Claude taxonomie"
+            cost={cost.claude_taxo}
+            calls={Math.ceil((oppSdgTagged ?? 0) / 3)}
+            unit="Haiku 4.5 classification"
+            unitCost="~$0.003/opp"
+          />
+          <CostCard
+            label="Claude NGO-fit"
+            cost={cost.claude_ngo}
+            calls={ngoClassified ?? 0}
+            unit="Haiku 4.5 filtre"
+            unitCost="~$0.0015/opp"
+          />
+          <CostCard
+            label="Claude co-writer"
+            cost={cost.claude_cowriter}
+            calls={aiCowriterLogs ?? 0}
+            unit="Haiku 4.5 rédaction"
+            unitCost="~$0.005/appel"
+          />
+        </div>
+        <p className="mt-4 text-2xs text-ink-500">
+          Tracking précis par appel (table <code>api_usage_logs</code>) à venir Sprint 4. Pour l'instant : counts × tarifs Anthropic / OpenAI publics au 15/05/2026.
+        </p>
+      </div>
+
+      {/* Sources en échec */}
+      {failingSources.length > 0 && (
+        <div className="card border-rose-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="eyebrow">Échecs récents</p>
+              <h2 className="mt-2 font-display text-2xl font-black">
+                {failingSources.length} source{failingSources.length > 1 ? 's' : ''} avec erreur
+              </h2>
+            </div>
+          </div>
+          <ul className="mt-5 divide-y divide-ink-100">
+            {failingSources.map(s => (
+              <li key={s.id} className="flex items-start justify-between gap-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold">{s.name}</p>
+                  <p className="mt-0.5 truncate text-2xs text-rose-600">⚠ {s.last_error}</p>
+                </div>
+                <span className="shrink-0 text-2xs text-ink-400">
+                  {s.last_checked ? formatDate(s.last_checked) : 'jamais'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Latence moyenne par source */}
+      {latencyRows.length > 0 && (
+        <div className="card">
+          <p className="eyebrow">Performance extraction</p>
+          <h2 className="mt-2 mb-5 font-display text-2xl font-black">Latence moyenne par source (15 dernières runs)</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-ink-100 text-left text-2xs font-black uppercase tracking-widest text-ink-500">
+                <tr><th className="py-2">Source</th><th>Runs</th><th>Items collectés</th><th>Latence moy.</th></tr>
+              </thead>
+              <tbody className="divide-y divide-ink-100">
+                {latencyRows.map(r => (
+                  <tr key={r.name}>
+                    <td className="py-2 font-bold">{r.name}</td>
+                    <td>{r.runs}</td>
+                    <td>{r.items}</td>
+                    <td className={r.avgMs > 5000 ? 'font-bold text-amber-700' : 'text-ink-600'}>
+                      {(r.avgMs / 1000).toFixed(2)} s
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Par catégorie */}
       <div className="card">
@@ -156,3 +303,17 @@ const CATEGORY_LABELS = {
   foundation: '🏛️ Fondation',
   embassy: '🏢 Ambassade'
 };
+
+function CostCard({ label, cost, calls, unit, unitCost }) {
+  return (
+    <div className="rounded-2xl border border-ink-100 bg-ink-50 p-5">
+      <p className="text-2xs font-black uppercase tracking-widest text-ink-500">{label}</p>
+      <p className="mt-2 font-display text-2xl font-black text-brand-700">
+        ${cost.toFixed(4)}
+      </p>
+      <p className="mt-1 text-xs text-ink-600">{calls} appel{calls > 1 ? 's' : ''}</p>
+      <p className="mt-1 text-2xs text-ink-400">{unit}</p>
+      <p className="text-2xs text-ink-400">{unitCost}</p>
+    </div>
+  );
+}
