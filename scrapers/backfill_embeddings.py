@@ -22,7 +22,7 @@ try:
     for name in ('.env.local', '.env'):
         p = root / name
         if p.exists():
-            load_dotenv(p, override=False)
+            load_dotenv(p, override=True)
 except ImportError:
     pass
 

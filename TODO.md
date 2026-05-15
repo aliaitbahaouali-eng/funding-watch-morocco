@@ -19,6 +19,12 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v11.sql`** dans Supabase SQL Editor
+  — Crée la table `ai_response_cache` (TTL 30 jours sur résultats IA).
+  Sans v11, les appels au co-writer génèrent un draft mais ne le cachent
+  pas → chaque clic refait un appel Claude facturé. Une fois v11 appliqué,
+  le 2e clic sur la même opp est gratuit (cache hit).
+
 - [ ] **Recharger le crédit Anthropic** sur https://console.anthropic.com/settings/billing
   — La clé `ANTHROPIC_API_KEY` renvoie `invalid_request_error: credit balance too low`
   → la classification taxonomique des nouvelles opps, l'AI co-writer (résumé exécutif)

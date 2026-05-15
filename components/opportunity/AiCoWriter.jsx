@@ -11,8 +11,9 @@ export default function AiCoWriter({ opportunityId }) {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
 
-  async function generate() {
+  async function generate({ force = false } = {}) {
     setState('loading');
     setError(null);
     setCopied(false);
@@ -20,19 +21,22 @@ export default function AiCoWriter({ opportunityId }) {
       const res = await fetch('/api/ai/cowriter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ opportunity_id: opportunityId }),
+        body: JSON.stringify({ opportunity_id: opportunityId, force }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg =
           data.error === 'ai_unavailable'
             ? "L'assistant IA n'est pas configuré (clé API manquante)."
+            : data.error === 'no_credit'
+            ? "Le crédit Anthropic est épuisé. Rechargez sur console.anthropic.com."
             : data.error === 'no_org'
             ? 'Complétez le profil de votre organisation pour utiliser le co-writer.'
             : 'La génération a échoué. Réessayez dans un instant.';
         throw new Error(msg);
       }
       setDraft(data.draft || '');
+      setFromCache(!!data.cached);
       setState('done');
     } catch (e) {
       setError(e.message);
@@ -65,7 +69,7 @@ export default function AiCoWriter({ opportunityId }) {
 
       {state !== 'done' && (
         <button
-          onClick={generate}
+          onClick={() => generate()}
           disabled={state === 'loading'}
           className="btn-primary mt-3 w-full text-2xs uppercase tracking-widest disabled:opacity-60"
         >
@@ -92,11 +96,20 @@ export default function AiCoWriter({ opportunityId }) {
             <button onClick={copy} className="btn-secondary flex-1 text-2xs uppercase tracking-widest">
               {copied ? 'Copié ✓' : 'Copier'}
             </button>
-            <button onClick={generate} className="btn-ghost text-2xs uppercase tracking-widest">
+            <button
+              onClick={() => generate({ force: true })}
+              title="Force un nouvel appel Claude (ignore le cache)"
+              className="btn-ghost text-2xs uppercase tracking-widest"
+            >
               Régénérer
             </button>
           </div>
-          <p className="mt-2 text-2xs leading-4 text-slate-400">
+          {fromCache && (
+            <p className="mt-2 text-2xs leading-4 text-emerald-600">
+              ⚡ Récupéré du cache (gratuit). Clique "Régénérer" pour relancer un appel Claude frais.
+            </p>
+          )}
+          <p className="mt-1 text-2xs leading-4 text-slate-400">
             Brouillon généré par IA — vérifiez les faits et les chiffres avant utilisation.
           </p>
         </div>
