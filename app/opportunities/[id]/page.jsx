@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import SaveButton from '@/components/opportunity/SaveButton';
 import AiCoWriter from '@/components/opportunity/AiCoWriter';
 import DonorIntelligence from '@/components/opportunity/DonorIntelligence';
+import SuccessProbability from '@/components/opportunity/SuccessProbability';
 import { Badge, Score, Card } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatAmount, daysUntil, opportunityStatus, scoreTier } from '@/lib/utils';
@@ -146,6 +147,10 @@ export default async function OpportunityDetailPage({ params }) {
             </div>
 
             <aside className="space-y-6">
+              {user && org && (
+                <SuccessProbability org={org} opp={opp} />
+              )}
+
               {scoring && (
                 <Card>
                   <p className="text-xs font-bold uppercase text-slate-500">Score de compatibilité</p>
