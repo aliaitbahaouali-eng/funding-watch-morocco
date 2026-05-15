@@ -7,6 +7,12 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ## 🔴 Bloquants avant bêta publique
 
+- [ ] **Exécuter `supabase/migration_v9.sql`** dans Supabase SQL Editor
+  — Ajoute les colonnes WhatsApp (`whatsapp_phone`, `whatsapp_alerts_enabled`,
+  `whatsapp_threshold`) sur `organizations` + la table `whatsapp_logs` avec
+  RLS. Sans v9, le formulaire d'opt-in WhatsApp dans `/dashboard/preferences`
+  enregistre dans le vide.
+
 - [ ] **Recharger le quota OpenAI (~10 $)** sur https://platform.openai.com/account/billing
   — La clé `OPENAI_API_KEY` renvoie actuellement `insufficient_quota` ; tous les
   embeddings tombent en fallback hash (non sémantique). Le score `semantic` reste
