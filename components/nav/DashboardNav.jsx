@@ -8,6 +8,7 @@ const ITEMS = [
   { href: '/dashboard/preferences', label: 'Préférences', icon: '🎯' },
   { href: '/dashboard/saved', label: 'Sauvegardées', icon: '⭐' },
   { href: '/dashboard/applications', label: 'Candidatures', icon: '📋' },
+  { href: '/dashboard/team', label: 'Équipe', icon: '👥' },
   { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙️' }
 ];
 

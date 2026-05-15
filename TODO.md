@@ -13,6 +13,12 @@ Liste vivante des actions à faire avant le lancement bêta public.
   RLS. Sans v9, le formulaire d'opt-in WhatsApp dans `/dashboard/preferences`
   enregistre dans le vide.
 
+- [ ] **Exécuter `supabase/migration_v10.sql`** dans Supabase SQL Editor
+  — Crée les tables `organization_members` + `organization_invitations`
+  pour les comptes équipe. Sans v10, `/dashboard/team` affiche l'owner seul,
+  les invitations échouent silencieusement et `/invite/[token]` renvoie
+  "invitation introuvable".
+
 - [ ] **Recharger le crédit Anthropic** sur https://console.anthropic.com/settings/billing
   — La clé `ANTHROPIC_API_KEY` renvoie `invalid_request_error: credit balance too low`
   → la classification taxonomique des nouvelles opps, l'AI co-writer (résumé exécutif)
