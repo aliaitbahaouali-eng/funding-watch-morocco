@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SaveButton from '@/components/opportunity/SaveButton';
 import AiCoWriter from '@/components/opportunity/AiCoWriter';
+import DonorIntelligence from '@/components/opportunity/DonorIntelligence';
 import { Badge, Score, Card } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatAmount, daysUntil, opportunityStatus, scoreTier } from '@/lib/utils';
@@ -125,6 +126,10 @@ export default async function OpportunityDetailPage({ params }) {
                     {opp.required_documents.map((d, i) => <li key={i}>{d}</li>)}
                   </ul>
                 </Card>
+              )}
+
+              {opp.donor_id && (
+                <DonorIntelligence donorId={opp.donor_id} currentOpportunityId={opp.id} />
               )}
 
               <Card>
