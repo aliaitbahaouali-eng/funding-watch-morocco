@@ -43,8 +43,10 @@ export default async function OpportunitiesPage({ searchParams }) {
     .from('opportunities')
     .select('*, donors(id, name), opportunity_themes(theme_id, themes(name_fr, slug))', { count: 'exact' })
     .eq('status', 'published')
-    // P0.1 — hide test fixtures from public listing (migration v12)
-    .or('is_test.is.null,is_test.eq.false');
+    // P0.1 — hide test fixtures (v12)
+    .or('is_test.is.null,is_test.eq.false')
+    // Sprint dedup — hide cross-source duplicates (v13)
+    .is('duplicate_of_id', null);
 
   // P0.2 — by default, hide expired opps. ?expired=1 to include them.
   if (sp.expired !== '1') {

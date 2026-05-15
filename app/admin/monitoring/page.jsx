@@ -37,7 +37,7 @@ export default async function MonitoringPage() {
   // Cost estimation (Sprint 3d — pas de tracking par appel pour l'instant,
   // on estime depuis les counts × coûts unitaires connus).
   // ============================================================
-  const [{ count: oppsEmbedded }, { count: orgsEmbedded }, { count: oppSdgTagged }, { count: ngoClassified }, { count: aiCowriterLogs }] = await Promise.all([
+  const [{ count: oppsEmbedded }, { count: orgsEmbedded }, { count: oppSdgTagged }, { count: ngoClassified }, { count: aiCowriterLogs }, { count: dupCount }, { count: publishedCount }] = await Promise.all([
     supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('embedding_model', 'openai/text-embedding-3-small'),
     supabase.from('organizations').select('id', { count: 'exact', head: true }).eq('embedding_model', 'openai/text-embedding-3-small'),
     // distinct opportunity_id côté DB serait mieux mais PostgREST ne le supporte pas; on prend la rangée brute
@@ -45,7 +45,14 @@ export default async function MonitoringPage() {
     supabase.from('opportunities').select('id', { count: 'exact', head: true }).not('ngo_relevance_score', 'is', null),
     // proxy pour appels co-writer : pas encore tracké → 0
     Promise.resolve({ count: 0 }),
+    // v13 — doublons cross-source détectés
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).not('duplicate_of_id', 'is', null),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published'),
   ]);
+
+  const dupRate = (publishedCount && publishedCount > 0)
+    ? Math.round(((dupCount || 0) / publishedCount) * 100)
+    : 0;
 
   // Coûts unitaires (en USD). Mis à jour 2026-05-15.
   const UNIT = {
@@ -114,11 +121,12 @@ export default async function MonitoringPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
         <StatTile label="Sources actives" value={activeSources} hint={`sur ${totalSources} configurées`} icon="🌐" />
         <StatTile label="Opportunités collectées" value={totalCollected} hint="cumul tous statuts" icon="📥" />
         <StatTile label="Publiées" value={totalPublished} hint="après validation" icon="✓" />
         <StatTile label="Taux succès 15j" value={successRate} suffix="%" hint={`${errors24h} erreurs 24h`} icon="⚡" deltaPositive={errors24h === 0} delta={errors24h ? `${errors24h} erreurs` : 'aucune erreur'} />
+        <StatTile label="Doublons cross-source" value={dupCount ?? 0} suffix={publishedCount ? ` / ${dupRate}%` : ''} hint="auto-détectés via embeddings" icon="🪞" />
       </div>
 
       {/* Coûts API estimés */}

@@ -63,6 +63,7 @@ export default async function HomePage() {
       .select('*, donors(name), opportunity_themes(theme_id, themes(name_fr, slug))')
       .eq('status', 'published')
       .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
       .gte('deadline', todayIso)
       .order('deadline', { ascending: true })
       .limit(6),
@@ -70,16 +71,19 @@ export default async function HomePage() {
     supabase.from('opportunities').select('id', { count: 'exact', head: true })
       .eq('status', 'published')
       .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
       .or(`deadline.is.null,deadline.gte.${todayIso}`),
     supabase.from('organizations').select('id', { count: 'exact', head: true }),
     supabase.from('donors').select('id', { count: 'exact', head: true }),
     supabase.from('opportunities').select('id', { count: 'exact', head: true })
       .eq('status', 'published')
       .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
       .eq('verified', true),
     supabase.from('opportunities').select('id', { count: 'exact', head: true })
       .eq('status', 'published')
       .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
       .or(`deadline.is.null,deadline.gte.${todayIso}`)
       .gte('published_at', sevenDaysAgo)
   ]);

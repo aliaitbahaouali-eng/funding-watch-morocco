@@ -19,6 +19,14 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v13.sql`** dans Supabase SQL Editor
+  — Cross-source dedup : ajoute `opportunities.duplicate_of_id` +
+  `seen_on_source_ids` + index + function `find_similar_opportunities()`
+  et **recrée** `match_opportunities_for_org` pour exclure dups + test
+  fixtures (incorporé). Une fois v13 appliqué, lance
+  `python scripts/dedup_cross_source.py` (dry-run d'abord avec `--dry-run`
+  pour voir ce qu'il marquerait) pour scanner les opps existantes.
+
 - [ ] **Exécuter `supabase/migration_v12.sql`** dans Supabase SQL Editor — **URGENT P0**
   — Ajoute la colonne `opportunities.is_test` (boolean, default false) et
   marque l'opp [TEST E2E] is_test=true. Sans v12, le listing `/opportunities`
