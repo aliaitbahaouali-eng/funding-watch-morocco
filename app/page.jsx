@@ -54,18 +54,34 @@ const ECOSYSTEM = ['Société civile marocaine', 'Bailleurs internationaux', 'Ex
 export default async function HomePage() {
   const supabase = createClient();
 
-  const [{ data: featured }, { data: themes }, { count: oppCount }, { count: orgCount }, { count: donorCount }, { count: verifiedCount }] = await Promise.all([
+  const todayIso = new Date().toISOString().slice(0, 10);
+  // P0.3 — count of "fresh" opps for the Header LIVE ticker (published, not test, deadline future or null)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+  const [{ data: featured }, { data: themes }, { count: oppCount }, { count: orgCount }, { count: donorCount }, { count: verifiedCount }, { count: freshOppCount }] = await Promise.all([
     supabase.from('opportunities')
       .select('*, donors(name), opportunity_themes(theme_id, themes(name_fr, slug))')
       .eq('status', 'published')
-      .gte('deadline', new Date().toISOString().slice(0, 10))
+      .or('is_test.is.null,is_test.eq.false')
+      .gte('deadline', todayIso)
       .order('deadline', { ascending: true })
       .limit(6),
     supabase.from('themes').select('name_fr, slug').eq('active', true).limit(12),
-    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .or(`deadline.is.null,deadline.gte.${todayIso}`),
     supabase.from('organizations').select('id', { count: 'exact', head: true }),
     supabase.from('donors').select('id', { count: 'exact', head: true }),
-    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published').eq('verified', true)
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .eq('verified', true),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .or(`deadline.is.null,deadline.gte.${todayIso}`)
+      .gte('published_at', sevenDaysAgo)
   ]);
 
   const TRUST_STATS = [

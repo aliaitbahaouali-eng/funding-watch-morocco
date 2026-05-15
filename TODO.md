@@ -19,6 +19,13 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v12.sql`** dans Supabase SQL Editor — **URGENT P0**
+  — Ajoute la colonne `opportunities.is_test` (boolean, default false) et
+  marque l'opp [TEST E2E] is_test=true. Sans v12, le listing `/opportunities`
+  et la landing renvoient **0 opps** (la query `.or('is_test.is.null,is_test.eq.false')`
+  échoue silencieusement → null → page affiche "Aucun résultat"). Le ticker
+  Header fait fallback sur "Veille active".
+
 - [ ] **Exécuter `supabase/migration_v11.sql`** dans Supabase SQL Editor
   — Crée la table `ai_response_cache` (TTL 30 jours sur résultats IA).
   Sans v11, les appels au co-writer génèrent un draft mais ne le cachent

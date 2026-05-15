@@ -32,10 +32,19 @@ export default async function OpportunitiesPage({ searchParams }) {
     }
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+
   let query = supabase
     .from('opportunities')
     .select('*, donors(id, name), opportunity_themes(theme_id, themes(name_fr, slug))', { count: 'exact' })
-    .eq('status', 'published');
+    .eq('status', 'published')
+    // P0.1 — hide test fixtures from public listing (migration v12)
+    .or('is_test.is.null,is_test.eq.false');
+
+  // P0.2 — by default, hide expired opps. ?expired=1 to include them.
+  if (sp.expired !== '1') {
+    query = query.or(`deadline.is.null,deadline.gte.${today}`);
+  }
 
   // ⭐ NGO-fit filter (S1) : par défaut on n'affiche que les opps pertinentes ONG
   // (ngo_relevant=true) OU non encore classées (ngo_relevant IS NULL) pour ne rien cacher au début.

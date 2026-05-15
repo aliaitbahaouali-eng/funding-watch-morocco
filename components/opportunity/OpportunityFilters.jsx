@@ -75,6 +75,15 @@ export default function OpportunityFilters({ themes, donors }) {
           ✓ Vérifié uniquement
         </label>
 
+        <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+          <input
+            type="checkbox"
+            checked={params.get('expired') === '1'}
+            onChange={(e) => setParam('expired', e.target.checked ? '1' : '')}
+          />
+          ⏰ Voir aussi les expirées
+        </label>
+
         <select className="input" value={params.get('sort') || 'deadline'} onChange={(e) => setParam('sort', e.target.value)}>
           <option value="deadline">Tri : deadline ↑</option>
           <option value="recent">Tri : plus récentes</option>

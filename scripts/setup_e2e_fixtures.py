@@ -58,7 +58,8 @@ existing = requests.get(f'{URL}/rest/v1/opportunities', headers=H,
 if existing:
     opp_id = existing[0]['id']
     refresh = {'deadline': future, 'status': 'published',
-               'ngo_relevant': True, 'morocco_eligible': True}
+               'ngo_relevant': True, 'morocco_eligible': True,
+               'is_test': True}
     if donor_id:
         refresh['donor_id'] = donor_id
     requests.patch(f'{URL}/rest/v1/opportunities', headers=H,
@@ -74,6 +75,7 @@ else:
         'summary': 'Appel a projets de test pour valider le pipeline matching. A supprimer apres verification.',
         'description': desc,
         'status': 'published', 'ngo_relevant': True, 'morocco_eligible': True,
+        'is_test': True,
         'deadline': future, 'language': 'fr', 'type': 'Appel a projets',
         'countries_eligible': ['MA'], 'external_id': ext_id,
         'official_url': 'https://example.test/e2e-fixture',

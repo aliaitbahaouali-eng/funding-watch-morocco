@@ -23,6 +23,7 @@ export default function Header() {
   const [dark, setDark] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [q, setQ] = useState('');
+  const [freshCount, setFreshCount] = useState(null); // P0.3 — vrai count des opps Maroc-éligibles publiées et non expirées
 
   useEffect(() => {
     const supabase = createClient();
@@ -33,6 +34,20 @@ export default function Header() {
         setRole(data?.role);
       }
     });
+    // Fresh count for the LIVE ticker — anon read, no auth required.
+    (async () => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { count } = await supabase
+        .from('opportunities')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'published')
+        .eq('morocco_eligible', true)
+        .or('is_test.is.null,is_test.eq.false')
+        .or(`deadline.is.null,deadline.gte.${todayIso}`)
+        .gte('published_at', sevenDaysAgo);
+      if (typeof count === 'number') setFreshCount(count);
+    })();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -67,7 +82,13 @@ export default function Header() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-1.5">
           <div className="flex items-center gap-3">
             <LiveBadge label="LIVE" />
-            <span className="text-white/80">3 nouvelles opportunités · Maroc éligible</span>
+            <span className="text-white/80">
+              {freshCount === null
+                ? 'Veille active'
+                : freshCount === 0
+                  ? 'Aucune nouvelle opp · Maroc éligible cette semaine'
+                  : `${freshCount} nouvelle${freshCount > 1 ? 's' : ''} opportunité${freshCount > 1 ? 's' : ''} · Maroc éligible`}
+            </span>
           </div>
           <div className="flex items-center gap-5 text-white/60">
             <Link href="/pricing" className="hover:text-white">Tarifs</Link>
