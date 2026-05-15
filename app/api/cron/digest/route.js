@@ -36,7 +36,7 @@ async function handler(request) {
   // Organisations cibles : onboarding complété + fréquence quotidienne + compte actif
   const { data: orgs, error: orgsError } = await supabase
     .from('organizations')
-    .select('id, name, email_frequency, onboarding_completed, profiles!inner(email, status)')
+    .select('id, name, email_frequency, onboarding_completed, unsubscribe_token, profiles!inner(email, status)')
     .eq('onboarding_completed', true)
     .eq('email_frequency', 'daily')
     .eq('profiles.status', 'active');
@@ -63,8 +63,21 @@ async function handler(request) {
     }
     if (!matches || matches.length === 0) { skipped++; continue; }
 
-    const { subject, htmlContent } = tplDailyDigest({ orgName: org.name, matches });
-    const result = await sendEmail({ to: email, subject, htmlContent });
+    const { subject, htmlContent } = tplDailyDigest({
+      orgName: org.name,
+      matches,
+      unsubscribeToken: org.unsubscribe_token,
+    });
+
+    // RFC 8058 headers — unsubscribe one-click natif Gmail/Apple Mail
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://funding-watch-morocco.vercel.app';
+    const unsubUrl = `${appUrl}/unsubscribe?token=${org.unsubscribe_token}`;
+    const headers = org.unsubscribe_token ? {
+      'List-Unsubscribe': `<${unsubUrl}>, <mailto:unsubscribe@fundingwatch.ma?subject=unsubscribe%20${org.id}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    } : undefined;
+
+    const result = await sendEmail({ to: email, subject, htmlContent, headers });
 
     await supabase.from('email_logs').insert({
       organization_id: org.id,
