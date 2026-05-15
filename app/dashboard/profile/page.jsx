@@ -3,6 +3,18 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrganization } from '@/lib/auth';
 import { Card, Alert } from '@/components/ui';
 import { computeOrgCompleteness } from '@/lib/utils';
+import DocumentIntelligence from '@/components/profile/DocumentIntelligence';
+
+const ALLOWED_AI_FIELDS = new Set([
+  'action_summary',
+  'intervention_themes_text',
+  'mission_long',
+  'geographic_scope',
+  'city',
+  'region',
+  'creation_year',
+  'past_projects',
+]);
 
 export default async function ProfilePage() {
   const org = await getCurrentOrganization();
@@ -25,6 +37,35 @@ export default async function ProfilePage() {
       email_frequency: formData.get('email_frequency')
     };
     await supabase.from('organizations').update(payload).eq('id', org.id);
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile');
+  }
+
+  async function applyExtractedProfile(formData) {
+    'use server';
+    const supabase = createClient();
+    const org = await getCurrentOrganization();
+    let raw;
+    try {
+      raw = JSON.parse(formData.get('payload') || '{}');
+    } catch {
+      return;
+    }
+    // Whitelist + sanitize
+    const update = {};
+    for (const k of Object.keys(raw)) {
+      if (!ALLOWED_AI_FIELDS.has(k)) continue;
+      const v = raw[k];
+      if (k === 'past_projects' && Array.isArray(v)) {
+        update.past_projects = v.slice(0, 10);
+      } else if (k === 'creation_year' && typeof v === 'number') {
+        update.creation_year = v;
+      } else if (typeof v === 'string' && v.trim()) {
+        update[k] = v.trim().slice(0, 1500);
+      }
+    }
+    if (Object.keys(update).length === 0) return;
+    await supabase.from('organizations').update(update).eq('id', org.id);
     revalidatePath('/dashboard');
     revalidatePath('/dashboard/profile');
   }
@@ -92,6 +133,22 @@ export default async function ProfilePage() {
           <button className="btn-primary mt-6">Enregistrer</button>
         </Card>
       </form>
+
+      <Card>
+        <DocumentIntelligence
+          current={{
+            action_summary: org?.action_summary,
+            intervention_themes_text: org?.intervention_themes_text,
+            mission_long: org?.mission_long,
+            geographic_scope: org?.geographic_scope,
+            city: org?.city,
+            region: org?.region,
+            creation_year: org?.creation_year,
+            past_projects: org?.past_projects,
+          }}
+          applyAction={applyExtractedProfile}
+        />
+      </Card>
     </div>
   );
 }

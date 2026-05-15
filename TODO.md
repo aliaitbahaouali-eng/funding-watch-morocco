@@ -13,12 +13,14 @@ Liste vivante des actions à faire avant le lancement bêta public.
   RLS. Sans v9, le formulaire d'opt-in WhatsApp dans `/dashboard/preferences`
   enregistre dans le vide.
 
-- [ ] **Recharger le quota OpenAI (~10 $)** sur https://platform.openai.com/account/billing
-  — La clé `OPENAI_API_KEY` renvoie actuellement `insufficient_quota` ; tous les
-  embeddings tombent en fallback hash (non sémantique). Le score `semantic` reste
-  à 0 sur tous les matches → la composante 40% du scoring final est neutralisée.
-  Une fois rechargé, relancer `python scrapers/backfill_embeddings.py --force`
-  pour ré-embeddifier les opportunités existantes (≈ $0.01 pour 100 opps).
+- [ ] **Recharger le crédit Anthropic** sur https://console.anthropic.com/settings/billing
+  — La clé `ANTHROPIC_API_KEY` renvoie `invalid_request_error: credit balance too low`
+  → la classification taxonomique des nouvelles opps, l'AI co-writer (résumé exécutif)
+  et le document intelligence (auto-complétion profil depuis texte) renvoient tous
+  une erreur. Le code surface un message `no_credit` explicite à l'utilisateur.
+
+- [x] ~~Recharger le quota OpenAI~~ — fait le 2026-05-15. Tous les opps + orgs
+  re-embeddés via `openai/text-embedding-3-small`, matching sémantique opérationnel.
 
 - [ ] **Nettoyer les fixtures de test E2E** créées le 2026-05-15 :
   ```sql
