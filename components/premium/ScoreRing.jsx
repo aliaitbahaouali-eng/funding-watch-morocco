@@ -4,7 +4,8 @@ export default function ScoreRing({ value = 0, size = 96, stroke = 10, label = '
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c * (1 - v / 100);
-  const color = v >= 90 ? '#0e9f6e' : v >= 70 ? '#cf2535' : v >= 50 ? '#f59f00' : '#828a98';
+  // P1.6 — tier colors aligned with audit: green >85 / amber 65-85 / gray <65.
+  const color = v > 85 ? '#0e9f6e' : v >= 65 ? '#f59f00' : '#94a3b8';
 
   return (
     <div className="relative inline-flex flex-col items-center" style={{ width: size }}>

@@ -22,12 +22,17 @@ export default async function OpportunitiesPage({ searchParams }) {
     supabase.from('donors').select('id, name').order('name')
   ]);
 
+  // P1.7 — multi-thèmes via `?themes=slug1,slug2,...` (avec rétrocompat `?theme=slug`)
   let oppIdsByTheme = null;
-  if (sp.theme && sp.theme !== 'all') {
-    const t = themes?.find((x) => x.slug === sp.theme);
-    if (t) {
-      const { data: links } = await supabase.from('opportunity_themes').select('opportunity_id').eq('theme_id', t.id);
-      oppIdsByTheme = (links || []).map((l) => l.opportunity_id);
+  const themeSlugs = (sp.themes || sp.theme || '').toString().split(',').filter(Boolean);
+  if (themeSlugs.length > 0 && themeSlugs[0] !== 'all') {
+    const themeIds = (themes || []).filter((x) => themeSlugs.includes(x.slug)).map((x) => x.id);
+    if (themeIds.length > 0) {
+      const { data: links } = await supabase
+        .from('opportunity_themes')
+        .select('opportunity_id')
+        .in('theme_id', themeIds);
+      oppIdsByTheme = Array.from(new Set((links || []).map((l) => l.opportunity_id)));
       if (oppIdsByTheme.length === 0) oppIdsByTheme = ['00000000-0000-0000-0000-000000000000'];
     }
   }
@@ -84,26 +89,23 @@ export default async function OpportunitiesPage({ searchParams }) {
     <main className="min-h-screen bg-ink-50">
       <Header />
 
-      {/* Hero compact */}
-      <section className="relative overflow-hidden border-b border-ink-100 bg-white py-12">
+      {/* Hero compact (P1.5 — réduit pour que les filtres + cartes soient au-dessus du fold) */}
+      <section className="relative overflow-hidden border-b border-ink-100 bg-white py-5 sm:py-7">
         <div className="absolute inset-0 bg-grid opacity-40" />
-        <div className="absolute -top-40 right-0 h-80 w-80 rounded-full bg-brand-500/15 blur-3xl" />
+        <div className="absolute -top-40 right-0 h-60 w-60 rounded-full bg-brand-500/15 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-6">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <LiveBadge label="Base d'opportunités" />
-                <span className="chip-brand">🇲🇦 Maroc éligible · {morCount ?? 0}</span>
-                <span className="chip-success">✓ Vérifiées · {verCount ?? 0}</span>
+                <span className="chip-brand">🇲🇦 {morCount ?? 0}</span>
+                <span className="chip-success">✓ {verCount ?? 0}</span>
               </div>
-              <h1 className="mt-4 font-display text-4xl font-black tracking-tight lg:text-5xl">
-                <AnimatedCounter value={count || 0} /> <span className="title-gradient">opportunités</span> en cours.
+              <h1 className="mt-2 font-display text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+                <AnimatedCounter value={count || 0} /> <span className="title-gradient">opportunités</span> en cours
               </h1>
-              <p className="mt-3 max-w-2xl text-base text-ink-500">
-                Filtrez, triez, sauvegardez. Les opportunités sont vérifiées et classées par thématique, deadline et niveau de difficulté.
-              </p>
             </div>
-            <div className="hidden lg:flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2 text-xs font-bold text-ink-500 shadow-card">
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-xs font-bold text-ink-500 shadow-card">
               <kbd className="rounded-md bg-ink-100 px-1.5 py-0.5 font-mono text-2xs text-ink-600">⌘K</kbd>
               <span>recherche rapide</span>
             </div>

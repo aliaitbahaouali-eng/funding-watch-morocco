@@ -57,11 +57,11 @@ export default async function TopMatches({ limit = 5 }) {
       </div>
       <div className="space-y-3">
         {matches.map((m, idx) => {
-          const tier = m.final_score >= 80 ? 'excellent' : m.final_score >= 60 ? 'good' : m.final_score >= 40 ? 'fair' : 'low';
+          // P1.6 — tier colors aligned: green >85 / amber 65-85 / gray <65
+          const tier = m.final_score > 85 ? 'excellent' : m.final_score >= 65 ? 'good' : 'low';
           const tierStyles = {
             excellent: 'bg-emerald-500',
-            good: 'bg-primary',
-            fair: 'bg-amber-500',
+            good: 'bg-amber-500',
             low: 'bg-slate-400',
           };
           return (
