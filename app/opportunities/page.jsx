@@ -60,7 +60,41 @@ export default async function OpportunitiesPage({ searchParams }) {
     query = query.or('ngo_relevant.is.null,ngo_relevant.eq.true');
   }
 
-  if (sp.q) query = query.or(`title.ilike.%${sp.q}%,summary.ilike.%${sp.q}%,description.ilike.%${sp.q}%`);
+  // P0 keyword fallback toujours dispo. Sprint 4B : si q présent ET pas
+  // ?keyword=1 explicite, on tente d'abord la recherche sémantique (RPC
+  // pgvector). Si le fallback OpenAI hash kicke ou si la RPC échoue,
+  // retombe sur le .ilike.
+  let semanticIds = null;
+  let semanticMeta = null;
+  if (sp.q && sp.keyword !== '1') {
+    try {
+      const { getEmbedding } = await import('@/lib/embeddings');
+      const { detectQueryLang, rerankResults } = await import('@/lib/search-helpers');
+      const { vector, model } = await getEmbedding(sp.q);
+      // Si on est en fallback hash, le sémantique n'a aucun sens → on skip.
+      if (model && model.startsWith('openai/')) {
+        const { data: matches, error: searchErr } = await supabase.rpc('semantic_search_opportunities', {
+          p_query_embedding: vector,
+          p_limit: 50,
+          p_morocco_only: sp.morocco === '1',
+        });
+        if (!searchErr && Array.isArray(matches) && matches.length > 0) {
+          const queryLang = detectQueryLang(sp.q);
+          const reranked = rerankResults(matches, { queryLang, preferMorocco: true });
+          semanticIds = reranked.map((r) => r.opportunity_id);
+          semanticMeta = { queryLang, model, count: reranked.length };
+        }
+      }
+    } catch (e) {
+      console.warn('[opportunities] semantic search failed, fallback keyword:', e?.message);
+    }
+  }
+
+  if (semanticIds && semanticIds.length > 0) {
+    query = query.in('id', semanticIds);
+  } else if (sp.q) {
+    query = query.or(`title.ilike.%${sp.q}%,summary.ilike.%${sp.q}%,description.ilike.%${sp.q}%`);
+  }
   if (sp.donor && sp.donor !== 'all') query = query.eq('donor_id', sp.donor);
   if (sp.morocco === '1') query = query.eq('morocco_eligible', true);
   if (sp.verified === '1') query = query.eq('verified', true);
@@ -72,13 +106,22 @@ export default async function OpportunitiesPage({ searchParams }) {
   }
   if (oppIdsByTheme) query = query.in('id', oppIdsByTheme);
 
-  const sort = sp.sort || 'deadline';
+  // Sprint 4B : en mode sémantique on respecte l'ordre du re-rank (sauf
+  // si l'utilisateur a choisi un tri explicite via le selector).
+  const sort = sp.sort || (semanticIds ? 'relevance' : 'deadline');
   if (sort === 'deadline') query = query.order('deadline', { ascending: true, nullsFirst: false });
   else if (sort === 'recent') query = query.order('published_at', { ascending: false, nullsFirst: false });
   else if (sort === 'amount') query = query.order('amount_max', { ascending: false, nullsFirst: false });
+  // sort === 'relevance' → on laisse Postgres rendre dans l'ordre du IN(semanticIds)
+  // (Postgres ne garantit pas l'ordre, mais avec l'index + le scope limité aux ~50
+  // IDs ça reste ok ; on re-trie côté JS après fetch pour garantir l'ordre exact).
 
   query = query.range(from, to);
-  const { data: opportunities, count } = await query;
+  let { data: opportunities, count } = await query;
+  if (semanticIds && sort === 'relevance' && Array.isArray(opportunities)) {
+    const order = new Map(semanticIds.map((id, idx) => [id, idx]));
+    opportunities = [...opportunities].sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999));
+  }
   const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE));
 
   // KPIs latéraux
@@ -121,9 +164,14 @@ export default async function OpportunitiesPage({ searchParams }) {
           <OpportunityFilters themes={themes || []} donors={donors || []} />
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-bold text-ink-700">
             {count ?? 0} résultat(s) <span className="text-ink-400">· page {page} sur {totalPages}</span>
+            {semanticMeta && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-2xs font-bold text-emerald-700">
+                ⚡ Recherche sémantique{semanticMeta.queryLang !== 'fr' ? ` · ${semanticMeta.queryLang.toUpperCase()}` : ''}
+              </span>
+            )}
           </p>
           <div className="flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-ink-500">
             <span>Vue :</span>

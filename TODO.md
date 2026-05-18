@@ -19,6 +19,12 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v19.sql`** dans Supabase SQL Editor
+  — Crée la fonction `semantic_search_opportunities(query_embedding, limit, morocco_only)`
+  utilisée par la barre de recherche `/opportunities`. Sans v19, la recherche
+  retombe sur l'ancien `.ilike` keyword (qui ne capte rien en arabe ni les
+  reformulations). Idempotent (CREATE OR REPLACE).
+
 - [ ] **Exécuter `supabase/migration_v18.sql`** dans Supabase SQL Editor
   — Crée `api_usage_logs` pour tracker précisément chaque appel Claude /
   OpenAI / Brevo / Meta. Sans v18, `/admin/monitoring` continue d'afficher
