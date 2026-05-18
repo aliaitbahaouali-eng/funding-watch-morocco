@@ -95,6 +95,87 @@
 
   .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(15,17,22,0.06) 1px, transparent 0); background-size: 24px 24px; }
   .dark .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0); }
+
+  /* ═══════════════════════════════════════════════════════════════
+     DEVEX / CRUNCHBASE — Data-dense pro components
+     Palette dominante neutre + accent rouge brand + data bleu links
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* Card "data-pro" — moins ronde, ombre subtile, padding dense */
+  .card-pro { @apply relative rounded-card-pro border border-line bg-surface-raised; box-shadow: 0 1px 2px rgba(15,17,22,0.04), 0 1px 1px rgba(15,17,22,0.06); }
+  .card-pro:hover { box-shadow: 0 4px 12px rgba(15,17,22,0.08), 0 2px 4px rgba(15,17,22,0.04); }
+  .dark .card-pro { @apply border-ink-800 bg-ink-900; }
+
+  /* Page background dense data */
+  .bg-page-pro { background: #fafbfc; }
+  .dark .bg-page-pro { background: #06080a; }
+
+  /* Sticky header data tables */
+  .data-thead { @apply sticky top-0 z-10 bg-surface-muted text-3xs font-bold uppercase tracking-wider-2 text-ink-500; box-shadow: 0 1px 0 0 #e4e7eb; }
+  .dark .data-thead { @apply bg-ink-800 text-ink-400; box-shadow: 0 1px 0 0 #2a313b; }
+  .data-th { @apply px-cell py-row text-left; }
+  .data-th-num { @apply px-cell py-row text-right tabular-nums; }
+  .data-row { @apply border-b border-line-subtle transition; }
+  .data-row:hover { @apply bg-data-50/40; box-shadow: inset 3px 0 0 0 #3b82f6; }
+  .data-td { @apply px-cell py-row align-middle text-sm; }
+  .data-td-num { @apply px-cell py-row text-right tabular-nums text-sm font-medium; }
+
+  /* Filter sidebar Devex-style (gauche fixed, dense, collapsible groups) */
+  .filter-panel { @apply rounded-card-pro border border-line bg-surface-raised p-4; }
+  .filter-group { @apply mb-5 border-b border-line-subtle pb-4 last:border-0 last:mb-0 last:pb-0; }
+  .filter-group-title { @apply mb-2.5 flex items-center justify-between text-2xs font-bold uppercase tracking-wider-2 text-ink-700; }
+  .filter-checkbox { @apply flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-700 transition hover:bg-data-50/40; }
+  .filter-checkbox input { @apply h-4 w-4 cursor-pointer rounded border-line accent-data-600; }
+
+  /* Chip-tag — taxonomies (SDG, DAC, populations) */
+  .chip-tag { @apply inline-flex items-center gap-1 rounded-data border border-line bg-surface-muted px-2 py-0.5 text-3xs font-semibold uppercase tracking-wider text-ink-600 transition hover:border-data-300 hover:bg-data-50 hover:text-data-700; }
+  .chip-tag-active { @apply chip-tag border-data-500 bg-data-50 text-data-700; }
+  .chip-tag-removable { @apply chip-tag pr-1; }
+
+  /* Metric — KPI cards Devex-style */
+  .metric-card { @apply card-pro p-4; }
+  .metric-label { @apply text-3xs font-bold uppercase tracking-wider-2 text-ink-500; }
+  .metric-value { @apply mt-1 font-display text-2xl font-black tabular-nums tracking-tighter-2 text-ink-900; }
+  .metric-trend-up { @apply inline-flex items-center gap-0.5 text-2xs font-bold text-success-600; }
+  .metric-trend-down { @apply inline-flex items-center gap-0.5 text-2xs font-bold text-danger-600; }
+
+  /* Link Devex-pro — bleu data + underline-offset */
+  .link-data { @apply text-data-600 underline decoration-data-200 decoration-1 underline-offset-2 transition hover:text-data-700 hover:decoration-data-500; }
+  .link-strong { @apply font-semibold text-ink-900 transition hover:text-data-600; }
+
+  /* Status pill — sémantique (opp status, ngo-fit, etc.) */
+  .pill { @apply inline-flex items-center gap-1 rounded-data px-2 py-0.5 text-3xs font-bold uppercase tracking-wider; }
+  .pill-success { @apply pill bg-success-50 text-success-700; }
+  .pill-warning { @apply pill bg-warning-50 text-warning-700; }
+  .pill-info { @apply pill bg-info-50 text-info-700; }
+  .pill-danger { @apply pill bg-danger-50 text-danger-700; }
+  .pill-brand { @apply pill bg-brand-50 text-brand-700; }
+  .pill-neutral { @apply pill bg-ink-100 text-ink-600; }
+  .pill-data { @apply pill bg-data-50 text-data-700; }
+
+  /* Section header Devex-pattern (label + h2 + actions à droite) */
+  .section-pro { @apply mb-6 flex flex-wrap items-end justify-between gap-3; }
+  .section-pro-label { @apply text-3xs font-bold uppercase tracking-wider-2 text-data-600; }
+  .section-pro-title { @apply mt-1 font-display text-xl font-black tracking-tighter-2 text-ink-900; }
+  .section-pro-subtitle { @apply mt-1 text-sm text-ink-500; }
+
+  /* Sidebar dense (admin/dashboard) */
+  .side-link { @apply flex items-center gap-3 rounded-data px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-data-50 hover:text-data-700; }
+  .side-link-active { @apply side-link bg-data-50 font-semibold text-data-700; box-shadow: inset 3px 0 0 0 #2563eb; }
+
+  /* Score badge Devex-style */
+  .score-badge { @apply inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-data px-2 font-display text-sm font-black tabular-nums; }
+  .score-badge-excellent { @apply score-badge bg-success-100 text-success-700; }
+  .score-badge-good { @apply score-badge bg-warning-100 text-warning-700; }
+  .score-badge-low { @apply score-badge bg-ink-100 text-ink-500; }
+
+  /* Tabular nums utility (data tables, KPI numbers) */
+  .num { @apply tabular-nums tracking-tighter-2; font-feature-settings: 'tnum'; }
+
+  /* Sort indicator (column header) */
+  .sort-indicator { @apply ml-1 inline-block text-3xs text-ink-400 transition; }
+  .sort-asc::after { content: '▲'; @apply text-data-600; }
+  .sort-desc::after { content: '▼'; @apply text-data-600; }
 }
 
 @layer utilities {
