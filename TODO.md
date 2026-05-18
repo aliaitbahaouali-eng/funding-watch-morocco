@@ -19,6 +19,13 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v18.sql`** dans Supabase SQL Editor
+  — Crée `api_usage_logs` pour tracker précisément chaque appel Claude /
+  OpenAI / Brevo / Meta. Sans v18, `/admin/monitoring` continue d'afficher
+  les coûts estimés ; avec v18 appliquée + des appels qui passent par
+  `lib/usage-tracking.js::logUsage`, la card passe sur des coûts RÉELS
+  par appel sur 30j (breakdown par provider/kind).
+
 - [ ] **Exécuter `supabase/migration_v17.sql`** dans Supabase SQL Editor
   — Crée `email_events` qui stocke les webhooks Brevo (opens, clicks, bounces).
   Sans v17, `/admin/emails` affiche un warning ambre et les stats engagement

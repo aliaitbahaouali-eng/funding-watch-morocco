@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateExecutiveSummary } from '@/lib/ai';
 import { buildKey, getCached, setCached, contentFingerprint } from '@/lib/ai-cache';
+import { logUsage } from '@/lib/usage-tracking';
 
 /**
  * POST /api/ai/cowriter  { opportunity_id, force?: boolean }
@@ -59,16 +60,41 @@ export async function POST(request) {
     }
   }
 
+  const startedAt = Date.now();
   const result = await generateExecutiveSummary(org, opp);
+  const durationMs = Date.now() - startedAt;
 
   if (!result.ok) {
     let errCode = result.error;
     if (typeof errCode === 'string' && /credit balance.*too low|insufficient.*credit/i.test(errCode)) {
       errCode = 'no_credit';
     }
+    // Log error usage (so /admin/monitoring shows failed attempts too)
+    await logUsage(admin, {
+      provider: 'anthropic',
+      model: result.model || null,
+      kind: 'cowriter',
+      organizationId: org.id,
+      opportunityId: opp.id,
+      durationMs,
+      status: errCode === 'no_api_key' ? 'simulated' : 'error',
+      errorMessage: result.error,
+    });
     const status = errCode === 'no_api_key' || errCode === 'no_credit' ? 503 : 502;
     return NextResponse.json({ error: errCode === 'no_api_key' ? 'ai_unavailable' : errCode === 'no_credit' ? 'no_credit' : 'generation_failed' }, { status });
   }
+
+  // Log successful usage
+  await logUsage(admin, {
+    provider: 'anthropic',
+    model: result.model,
+    kind: 'cowriter',
+    organizationId: org.id,
+    opportunityId: opp.id,
+    usage: result.usage,
+    durationMs,
+    status: 'ok',
+  });
 
   // Store in cache
   await setCached(admin, {

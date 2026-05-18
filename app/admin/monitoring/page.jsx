@@ -24,6 +24,33 @@ export default async function MonitoringPage() {
     .order('checked_at', { ascending: false })
     .limit(15);
 
+  // Sprint 4A.2 — détection sources avec ≥3 échecs consécutifs (300 dernières runs)
+  const { data: wideLogs } = await supabase
+    .from('scraping_logs')
+    .select('source_id, source_name, status, checked_at, error_message')
+    .order('checked_at', { ascending: false })
+    .limit(300);
+  const lastByS = new Map();
+  for (const l of (wideLogs || [])) {
+    if (!l.source_id) continue;
+    const arr = lastByS.get(l.source_id) || [];
+    if (arr.length < 3) arr.push(l);
+    lastByS.set(l.source_id, arr);
+  }
+  const criticalSources = [];
+  for (const [sourceId, arr] of lastByS.entries()) {
+    if (arr.length >= 3 && arr.every((l) => l.status === 'error')) {
+      const src = (sources || []).find((s) => s.id === sourceId);
+      criticalSources.push({
+        id: sourceId,
+        name: src?.name || arr[0]?.source_name || sourceId,
+        category: src?.category,
+        last_error: arr[0].error_message,
+        last_checked: arr[0].checked_at,
+      });
+    }
+  }
+
   const totalSources = sources?.length ?? 0;
   const activeSources = (sources || []).filter(s => s.active).length;
   const totalCollected = (sources || []).reduce((s, x) => s + (x.opportunities_collected || 0), 0);
@@ -67,7 +94,26 @@ export default async function MonitoringPage() {
     claude_ngo: (ngoClassified ?? 0) * UNIT.claude_haiku_ngo,
     claude_cowriter: (aiCowriterLogs ?? 0) * UNIT.claude_haiku_cowriter,
   };
-  const totalCost = cost.openai + cost.claude_taxo + cost.claude_ngo + cost.claude_cowriter;
+  let totalCost = cost.openai + cost.claude_taxo + cost.claude_ngo + cost.claude_cowriter;
+  let realCostByKind = null;
+  let costSource = 'estimated';
+  // Sprint 4A.3 — si api_usage_logs existe, on remplace par du tracking réel
+  const realUsage = await supabase
+    .from('api_usage_logs')
+    .select('provider, kind, cost_usd, input_tokens, output_tokens')
+    .gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString())
+    .limit(10000);
+  if (!realUsage.error && (realUsage.data || []).length > 0) {
+    costSource = 'real';
+    realCostByKind = {};
+    let realTotal = 0;
+    for (const row of realUsage.data) {
+      const k = `${row.provider}/${row.kind || 'unknown'}`;
+      realCostByKind[k] = (realCostByKind[k] || 0) + (Number(row.cost_usd) || 0);
+      realTotal += (Number(row.cost_usd) || 0);
+    }
+    totalCost = realTotal;
+  }
 
   // Sources avec dernière erreur (top 5)
   const failingSources = (sources || []).filter(s => s.last_error).slice(0, 5);
@@ -129,15 +175,17 @@ export default async function MonitoringPage() {
         <StatTile label="Doublons cross-source" value={dupCount ?? 0} suffix={publishedCount ? ` / ${dupRate}%` : ''} hint="auto-détectés via embeddings" icon="🪞" />
       </div>
 
-      {/* Coûts API estimés */}
+      {/* Coûts API */}
       <div className="card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="eyebrow">Coûts API estimés</p>
-            <h2 className="mt-2 font-display text-2xl font-black">~${totalCost.toFixed(4)} cumul à date</h2>
+            <p className="eyebrow">Coûts API {costSource === 'real' ? '(réels)' : '(estimés)'}</p>
+            <h2 className="mt-2 font-display text-2xl font-black">
+              {costSource === 'real' ? '$' : '~$'}{totalCost.toFixed(4)} {costSource === 'real' ? 'sur 30j' : 'cumul à date'}
+            </h2>
           </div>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-2xs font-bold text-amber-700">
-            Estimation depuis counts × coûts unitaires (pas de tracking par appel)
+          <span className={`rounded-full px-3 py-1 text-2xs font-bold ${costSource === 'real' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+            {costSource === 'real' ? '✓ Tracking par appel (api_usage_logs)' : 'Estimation counts × coûts unitaires'}
           </span>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -170,12 +218,55 @@ export default async function MonitoringPage() {
             unitCost="~$0.005/appel"
           />
         </div>
+        {costSource === 'real' && realCostByKind && (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {Object.entries(realCostByKind).sort((a,b) => b[1]-a[1]).slice(0, 6).map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between rounded-xl border border-ink-100 bg-ink-50 px-3 py-2 text-xs">
+                <code className="text-ink-700">{k}</code>
+                <span className="font-bold text-brand-700">${v.toFixed(4)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <p className="mt-4 text-2xs text-ink-500">
-          Tracking précis par appel (table <code>api_usage_logs</code>) à venir Sprint 4. Pour l'instant : counts × tarifs Anthropic / OpenAI publics au 15/05/2026.
+          {costSource === 'real'
+            ? 'Tracking par appel via api_usage_logs (v18). Coûts exacts depuis 30 jours.'
+            : 'Estimation counts × tarifs Anthropic / OpenAI publics au 15/05/2026. Sprint 4A.3 (table api_usage_logs) à appliquer pour tracking réel.'}
         </p>
       </div>
 
-      {/* Sources en échec */}
+      {/* Sprint 4A.2 — sources critiques (≥3 échecs consécutifs) */}
+      {criticalSources.length > 0 && (
+        <div className="card border-2 border-rose-300 bg-rose-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="eyebrow text-rose-700">🔴 Alerte critique</p>
+              <h2 className="mt-2 font-display text-2xl font-black text-rose-900">
+                {criticalSources.length} source{criticalSources.length > 1 ? 's' : ''} en échec depuis ≥3 runs
+              </h2>
+              <p className="mt-1 text-sm text-rose-700">
+                Vérifie le scraper / l'URL / la structure HTML. Sans intervention, ces sources n'apportent plus de nouvelles opps.
+              </p>
+            </div>
+          </div>
+          <ul className="mt-5 divide-y divide-rose-200">
+            {criticalSources.map(s => (
+              <li key={s.id} className="flex items-start justify-between gap-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-rose-900">{s.name}</p>
+                  {s.category && <p className="text-2xs uppercase tracking-widest text-rose-600">{s.category}</p>}
+                  {s.last_error && <p className="mt-1 truncate text-xs text-rose-700">⚠ {s.last_error}</p>}
+                </div>
+                <span className="shrink-0 text-2xs text-rose-500">
+                  {s.last_checked ? formatDate(s.last_checked) : '—'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Sources en échec récent (last_error non null mais pas forcément 3 consécutifs) */}
       {failingSources.length > 0 && (
         <div className="card border-rose-200">
           <div className="flex items-center justify-between">

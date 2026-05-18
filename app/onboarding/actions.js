@@ -1,6 +1,7 @@
 'use server';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getEmbedding, buildOrgText } from '@/lib/embeddings';
 
 /**
  * Sauvegarde le profil orga complet à la fin du wizard.
@@ -94,6 +95,57 @@ export async function completeOnboarding(data) {
     await supabase.from('org_action_geographies').insert(
       data.geography_slugs.map(geography_slug => ({ org_id: org.id, geography_slug }))
     );
+  }
+
+  // 3. Embedding immediate — sans ça, match_opportunities_for_org tombe sur
+  // le fallback taxonomy-only et le sémantique reste à 0 jusqu'au prochain
+  // backfill nocturne. On le fait synchrone : ~200-500ms OpenAI, acceptable.
+  // En cas d'échec on log et on continue (l'onboarding ne doit pas planter).
+  try {
+    const [sdgRows, dacRows, popRows, geoRows] = await Promise.all([
+      data.sdg_ids?.length
+        ? supabase.from('sdg_goals').select('name_fr').in('id', data.sdg_ids.map(Number))
+        : { data: [] },
+      data.dac_sector_ids?.length
+        ? supabase.from('dac_sectors').select('name_fr').in('id', data.dac_sector_ids)
+        : { data: [] },
+      data.population_slugs?.length
+        ? supabase.from('target_populations').select('name_fr').in('slug', data.population_slugs)
+        : { data: [] },
+      data.geography_slugs?.length
+        ? supabase.from('action_geographies').select('name_fr').in('slug', data.geography_slugs)
+        : { data: [] },
+    ]);
+    const text = buildOrgText(payload, {
+      sdgNames: (sdgRows.data || []).map((r) => r.name_fr),
+      dacNames: (dacRows.data || []).map((r) => r.name_fr),
+      populations: (popRows.data || []).map((r) => r.name_fr),
+      geographies: (geoRows.data || []).map((r) => r.name_fr),
+    });
+    if (text.trim().length >= 30) {
+      const { vector, model } = await getEmbedding(text);
+      await supabase.from('organizations').update({
+        embedding: vector,
+        embedding_model: model,
+        embedding_updated_at: new Date().toISOString(),
+      }).eq('id', org.id);
+      // Track usage (Sprint 4A.3 — non bloquant si v18 pas appliqué)
+      try {
+        const { logUsage } = await import('@/lib/usage-tracking');
+        // estimation tokens (text-embedding-3-small : ~1 token / 4 chars)
+        const approxTokens = Math.ceil(text.length / 4);
+        await logUsage(supabase, {
+          provider: 'openai',
+          model: model === 'openai/text-embedding-3-small' ? 'text-embedding-3-small' : model,
+          kind: 'embed_org',
+          organizationId: org.id,
+          usage: { input_tokens: approxTokens },
+          status: model.startsWith('openai/') ? 'ok' : 'simulated',
+        });
+      } catch {}
+    }
+  } catch (e) {
+    console.warn('[onboarding] embedding failed (non-blocking):', e?.message || e);
   }
 
   revalidatePath('/dashboard');
