@@ -19,6 +19,14 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v20.sql`** dans Supabase SQL Editor
+  — Ajoute `donors.profile_embedding` + index ivfflat + RPC
+  `find_similar_donors_for_org`. Puis lance
+  `python scripts/backfill_donor_embeddings.py` pour générer les embeddings
+  de tous les bailleurs depuis leur nom + description + opps + thématiques.
+  Sans v20 + le backfill, le widget "🔭 Bailleurs à explorer" du dashboard
+  affiche un message d'attente. Coût OpenAI : ~$0.0001 pour 9 bailleurs.
+
 - [ ] **Exécuter `supabase/migration_v19.sql`** dans Supabase SQL Editor
   — Crée la fonction `semantic_search_opportunities(query_embedding, limit, morocco_only)`
   utilisée par la barre de recherche `/opportunities`. Sans v19, la recherche

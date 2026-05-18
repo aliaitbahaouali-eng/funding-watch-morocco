@@ -12,6 +12,7 @@ import OpportunityCardPremium from '@/components/premium/OpportunityCardPremium'
 import TrendsChart from '@/components/dashboard/TrendsChart';
 import DeadlineHeatmap from '@/components/dashboard/DeadlineHeatmap';
 import TopMatches from '@/components/dashboard/TopMatches';
+import DonorRecommendations from '@/components/dashboard/DonorRecommendations';
 
 export default async function DashboardHome({ searchParams }) {
   const supabase = createClient();
@@ -138,6 +139,9 @@ export default async function DashboardHome({ searchParams }) {
 
       {/* ⚡ NOUVEAU — Top Matches IA (matching vectoriel réel) */}
       <TopMatches limit={5} />
+
+      {/* 🔭 Sprint 4E — Donor intelligence prédictive */}
+      <DonorRecommendations limit={5} />
 
       {/* Recommandations IA (ancien système — sera supprimé après validation du matching vectoriel) */}
       <div className="card">
