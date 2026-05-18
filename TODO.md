@@ -19,6 +19,12 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v17.sql`** dans Supabase SQL Editor
+  — Crée `email_events` qui stocke les webhooks Brevo (opens, clicks, bounces).
+  Sans v17, `/admin/emails` affiche un warning ambre et les stats engagement
+  restent vides. Puis : configure `BREVO_WEBHOOK_SECRET` dans Vercel + Brevo
+  dashboard → Settings → Transactional → Webhooks → URL avec `?secret=`.
+
 - [ ] **Exécuter `supabase/migration_v13.sql`** dans Supabase SQL Editor
   — Cross-source dedup : ajoute `opportunities.duplicate_of_id` +
   `seen_on_source_ids` + index + function `find_similar_opportunities()`
