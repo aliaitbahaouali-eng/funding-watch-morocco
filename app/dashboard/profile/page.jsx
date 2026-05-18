@@ -41,6 +41,29 @@ export default async function ProfilePage() {
     revalidatePath('/dashboard/profile');
   }
 
+  async function updateDigestPrefs(formData) {
+    'use server';
+    const supabase = createClient();
+    const org = await getCurrentOrganization();
+    if (!org) return;
+
+    const days = formData.getAll('digest_day')
+      .map((d) => parseInt(d, 10))
+      .filter((d) => Number.isFinite(d) && d >= 1 && d <= 7);
+    const hourRaw = parseInt(formData.get('digest_hour') || '7', 10);
+    const hour = Math.max(0, Math.min(23, Number.isFinite(hourRaw) ? hourRaw : 7));
+    const scoreRaw = parseInt(formData.get('digest_min_score') || '0', 10);
+    const minScore = Math.max(0, Math.min(100, Number.isFinite(scoreRaw) ? scoreRaw : 0));
+
+    await supabase.from('organizations').update({
+      digest_days_of_week: days.length ? days : [1, 2, 3, 4, 5],
+      digest_hour: hour,
+      digest_min_score: minScore,
+    }).eq('id', org.id);
+
+    revalidatePath('/dashboard/profile');
+  }
+
   async function applyExtractedProfile(formData) {
     'use server';
     const supabase = createClient();
@@ -131,6 +154,82 @@ export default async function ProfilePage() {
               </select></div>
           </div>
           <button className="btn-primary mt-6">Enregistrer</button>
+        </Card>
+      </form>
+
+      {/* === Préférences digest (Sprint 2B.2) === */}
+      <form action={updateDigestPrefs}>
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xl font-black">Préférences du digest matinal</h2>
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-bold text-amber-700">Nouveau</span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Choisis quand et comment recevoir ton digest. S'applique uniquement si la fréquence ci-dessus est <b>Quotidienne</b>.
+          </p>
+
+          {/* Jours de la semaine */}
+          <div className="mt-5">
+            <label className="label">Jours d'envoi</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { d: 1, l: 'L', name: 'Lundi' },
+                { d: 2, l: 'M', name: 'Mardi' },
+                { d: 3, l: 'M', name: 'Mercredi' },
+                { d: 4, l: 'J', name: 'Jeudi' },
+                { d: 5, l: 'V', name: 'Vendredi' },
+                { d: 6, l: 'S', name: 'Samedi' },
+                { d: 7, l: 'D', name: 'Dimanche' },
+              ].map(({ d, l, name }) => {
+                const selected = (org?.digest_days_of_week || [1, 2, 3, 4, 5]).includes(d);
+                return (
+                  <label key={d} className="cursor-pointer" title={name}>
+                    <input type="checkbox" name="digest_day" value={d} defaultChecked={selected} className="peer sr-only" />
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-200 font-black text-slate-600 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white transition">
+                      {l}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-2xs text-slate-400">Par défaut : jours ouvrés (L-V).</p>
+          </div>
+
+          {/* Heure + score min */}
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">Heure d'envoi (UTC)</label>
+              <select name="digest_hour" defaultValue={org?.digest_hour ?? 7} className="input">
+                {Array.from({ length: 24 }).map((_, h) => {
+                  const localH = (h + 1) % 24; // Maroc UTC+1
+                  return (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00 UTC ({String(localH).padStart(2, '0')}h Maroc)
+                    </option>
+                  );
+                })}
+              </select>
+              <p className="mt-1 text-2xs text-slate-400">Le cron tourne chaque heure et s'envoie à ton créneau choisi.</p>
+            </div>
+
+            <div>
+              <label className="label">Score minimum (0-100)</label>
+              <input
+                type="number"
+                name="digest_min_score"
+                min="0"
+                max="100"
+                step="5"
+                defaultValue={org?.digest_min_score ?? 0}
+                className="input"
+              />
+              <p className="mt-1 text-2xs text-slate-400">
+                Si aucune opp ne dépasse ce score, on ne t'envoie rien (silencieux plutôt que digest vide).
+              </p>
+            </div>
+          </div>
+
+          <button className="btn-primary mt-6">Enregistrer mes préférences</button>
         </Card>
       </form>
 
