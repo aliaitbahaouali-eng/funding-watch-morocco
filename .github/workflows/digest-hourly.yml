@@ -1,0 +1,38 @@
+name: digest-hourly
+
+# Tourne TOUTES LES HEURES pour permettre la granularité digest_hour par
+# utilisateur. Vercel Hobby plafonne les crons à 1/jour, donc on délègue
+# à GitHub Actions (gratuit + illimité). Le route /api/cron/digest filtre
+# côté Next.js les orgs dont digest_hour matche l'heure UTC courante,
+# puis dédup intra-journée via email_logs.
+#
+# Vercel garde un cron daily de backup à 07h UTC (vercel.json) au cas où
+# GitHub Actions est down.
+#
+# Secrets requis :
+#   NEXT_PUBLIC_APP_URL  (ex: https://funding-watch-morocco.vercel.app)
+#   CRON_SECRET          (même valeur que Vercel env var)
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # toutes les heures pile
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit /api/cron/digest
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sSf -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL}/api/cron/digest" \
+            -o /tmp/digest-response.json
+          echo "--- response ---"
+          cat /tmp/digest-response.json
+          echo
