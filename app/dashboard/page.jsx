@@ -13,6 +13,8 @@ import TrendsChart from '@/components/dashboard/TrendsChart';
 import DeadlineHeatmap from '@/components/dashboard/DeadlineHeatmap';
 import TopMatches from '@/components/dashboard/TopMatches';
 import DonorRecommendations from '@/components/dashboard/DonorRecommendations';
+import DeadlineTimeline from '@/components/dashboard/DeadlineTimeline';
+import PerfectMatchTrigger from '@/components/dashboard/PerfectMatchTrigger';
 
 export default async function DashboardHome({ searchParams }) {
   const supabase = createClient();
@@ -140,8 +142,14 @@ export default async function DashboardHome({ searchParams }) {
       {/* ⚡ NOUVEAU — Top Matches IA (matching vectoriel réel) */}
       <TopMatches limit={5} />
 
+      {/* 📅 Sprint 4C — Frise des deadlines (90j) */}
+      <DeadlineTimeline windowDays={90} />
+
       {/* 🔭 Sprint 4E — Donor intelligence prédictive */}
       <DonorRecommendations limit={5} />
+
+      {/* ✨ Sprint 4C — Modal "Match parfait" (client component, déclenché si score ≥85 jamais vu) */}
+      <PerfectMatchTrigger threshold={85} />
 
       {/* Recommandations IA (ancien système — sera supprimé après validation du matching vectoriel) */}
       <div className="card">
