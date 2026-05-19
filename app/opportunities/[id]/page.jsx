@@ -13,6 +13,49 @@ import { generateChecklist } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Sprint 4K — Métadonnées dynamiques par opportunité.
+ * Quand on partage l'URL d'une opp dans WhatsApp / LinkedIn / Slack,
+ * la preview affiche titre + résumé + bailleur au lieu d'une URL nue.
+ */
+export async function generateMetadata({ params }) {
+  const supabase = createClient();
+  const { data: opp } = await supabase
+    .from('opportunities')
+    .select('title, summary, donors(name), deadline, morocco_eligible')
+    .eq('id', params.id)
+    .eq('status', 'published')
+    .single();
+
+  if (!opp) return { title: 'Opportunité introuvable' };
+
+  const donorPart = opp.donors?.name ? ` — ${opp.donors.name}` : '';
+  const title = `${opp.title}${donorPart}`;
+  const deadlinePart = opp.deadline
+    ? ` Deadline : ${new Date(opp.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+    : '';
+  const moroccoPart = opp.morocco_eligible ? ' 🇲🇦 Éligible Maroc.' : '';
+  const description = (opp.summary || '').slice(0, 220)
+    || `Opportunité de financement référencée sur Funding Watch.${deadlinePart}${moroccoPart}`.trim();
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      url: `/opportunities/${params.id}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    alternates: { canonical: `/opportunities/${params.id}` },
+  };
+}
+
 export default async function OpportunityDetailPage({ params }) {
   const supabase = createClient();
   const { data: opp, error } = await supabase
