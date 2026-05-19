@@ -19,6 +19,14 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v21.sql`** dans Supabase SQL Editor
+  — Crée la RPC `find_collaborative_recommendations_for_org` (Sprint 4F :
+  recommandation collaborative anonymisée). Cosine pgvector entre l'orga
+  cible et toutes les autres orgs onboardées → top pairs → aggrège leurs
+  saved_opportunities en excluant celles déjà dans son vault. Sans v21,
+  la carte « 👥 Ce que regardent les assos comme toi » du dashboard affiche
+  un message d'attente. Idempotent (CREATE OR REPLACE).
+
 - [ ] **Exécuter `supabase/migration_v20.sql`** dans Supabase SQL Editor
   — Ajoute `donors.profile_embedding` + index ivfflat + RPC
   `find_similar_donors_for_org`. Puis lance

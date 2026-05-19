@@ -14,6 +14,7 @@ import DeadlineHeatmap from '@/components/dashboard/DeadlineHeatmap';
 import TopMatches from '@/components/dashboard/TopMatches';
 import DonorRecommendations from '@/components/dashboard/DonorRecommendations';
 import DeadlineTimeline from '@/components/dashboard/DeadlineTimeline';
+import CollaborativeRecommendations from '@/components/dashboard/CollaborativeRecommendations';
 import PerfectMatchTrigger from '@/components/dashboard/PerfectMatchTrigger';
 
 export default async function DashboardHome({ searchParams }) {
@@ -147,6 +148,9 @@ export default async function DashboardHome({ searchParams }) {
 
       {/* 🔭 Sprint 4E — Donor intelligence prédictive */}
       <DonorRecommendations limit={5} />
+
+      {/* 👥 Sprint 4F — Recommandation collaborative (signal social anonymisé) */}
+      <CollaborativeRecommendations limit={5} />
 
       {/* ✨ Sprint 4C — Modal "Match parfait" (client component, déclenché si score ≥85 jamais vu) */}
       <PerfectMatchTrigger threshold={85} />
