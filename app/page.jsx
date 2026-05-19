@@ -15,50 +15,46 @@ import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-const SECTORS = [
-  { slug: 'femmes',  label: 'Femmes & égalité',  count: 124, delta: '+18%' },
-  { slug: 'jeunes',  label: 'Jeunes & emploi',   count: 198, delta: '+24%' },
-  { slug: 'climat',  label: 'Climat',            count: 87,  delta: '+12%' },
-  { slug: 'digital', label: 'Digitalisation',    count: 56,  delta: '+33%' },
-  { slug: 'sante',   label: 'Santé',             count: 71,  delta: '+9%'  },
-  { slug: 'rural',   label: 'Rural & agriculture', count: 64, delta: '+6%' }
-];
+// Sprint 4J — Toutes les données sont désormais calculées à partir de Supabase.
+// Les anciens tableaux hardcodés (SECTORS, RECENT_ACTIVITY, SPARKLINE_DATA,
+// BETA_PARTNERS, TESTIMONIALS) ont été supprimés au profit de queries réelles.
 
-const TESTIMONIALS = [
-  { quote: 'Funding Watch nous a fait gagner 6 mois sur notre dernier appel UE. Le scoring est étrangement précis.', name: 'Hanane M.', role: 'Directrice, ONG Education Rabat' },
-  { quote: 'Enfin une plateforme pensée pour les associations marocaines. Les alertes ciblées valent de l\'or.', name: 'Karim B.', role: 'Coordinateur projets, Casablanca' },
-  { quote: 'On a sauvegardé 14 appels et soumis 3 candidatures en un mois. Productivité ×4.', name: 'Sofia A.', role: 'Coopérative ESS, Marrakech' }
-];
+// Slugs prioritaires pour la section "Secteurs les plus financés" — on les
+// remonte d'abord, puis on complète avec les autres thématiques actives par
+// volume.
+const PRIORITY_SECTOR_SLUGS = ['femmes', 'jeunes', 'climat', 'digital', 'sante', 'rural'];
 
-const RECENT_ACTIVITY = [
-  { type: 'new', title: 'UE — Appel NDICI MENA 2026 publié', time: 'il y a 12 min' },
-  { type: 'validated', title: 'UNDP Procurement validée par l\'équipe', time: 'il y a 1 h' },
-  { type: 'match', title: '3 nouvelles opportunités matchent votre profil', time: 'il y a 2 h' },
-  { type: 'reminder', title: 'Deadline AFD dans 7 jours', time: 'il y a 4 h' },
-  { type: 'new', title: 'GIZ — Renewable energy capacity building', time: 'il y a 6 h' }
-];
-
-const SPARKLINE_DATA = [12, 18, 15, 22, 30, 26, 34, 38, 32, 45, 50, 48, 56, 60, 58, 68, 72, 75, 82];
-
-// ⚠️ Placeholders bêta — à remplacer par les vraies organisations partenaires
-// au fur et à mesure du recrutement de la bêta privée (cf. AUDIT §3.4).
-const BETA_PARTNERS = [
-  'Association Éducation Rabat',
-  'Coopérative ESS Marrakech',
-  'ONG Femmes & Climat',
-  'Réseau Jeunesse Souss',
-  'Fondation Locale Tanger'
-];
 const ECOSYSTEM = ['Société civile marocaine', 'Bailleurs internationaux', 'Experts financement'];
 
 export default async function HomePage() {
   const supabase = createClient();
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
   // P0.3 — count of "fresh" opps for the Header LIVE ticker (published, not test, deadline future or null)
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+  const sixtyDaysAgo = new Date(now.getTime() - 60 * 86400000).toISOString();
+  const nineteenDaysAgo = new Date(now.getTime() - 19 * 86400000).toISOString();
 
-  const [{ data: featured }, { data: themes }, { count: oppCount }, { count: orgCount }, { count: donorCount }, { count: verifiedCount }, { count: freshOppCount }] = await Promise.all([
+  const [
+    { data: featured },
+    { data: themes },
+    { count: oppCount },
+    { count: orgCount },
+    { count: donorCount },
+    { count: verifiedCount },
+    { count: freshOppCount },
+    { count: newOppsThisMonth },
+    { count: newOppsPrevMonth },
+    { count: newOrgsThisMonth },
+    { count: newOrgsPrevMonth },
+    { count: newDonorsThisMonth },
+    { data: themesWithCounts },
+    { data: dailyPublishedRaw },
+    { data: recentPublished },
+    { data: recentVerified },
+  ] = await Promise.all([
     supabase.from('opportunities')
       .select('*, donors(name), opportunity_themes(theme_id, themes(name_fr, slug))')
       .eq('status', 'published')
@@ -85,8 +81,148 @@ export default async function HomePage() {
       .or('is_test.is.null,is_test.eq.false')
       .is('duplicate_of_id', null)
       .or(`deadline.is.null,deadline.gte.${todayIso}`)
-      .gte('published_at', sevenDaysAgo)
+      .gte('published_at', sevenDaysAgo),
+    // Sprint 4J — Deltas pour StatTile (croissance mensuelle réelle)
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
+      .gte('published_at', thirtyDaysAgo),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
+      .gte('published_at', sixtyDaysAgo)
+      .lt('published_at', thirtyDaysAgo),
+    supabase.from('organizations').select('id', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo),
+    supabase.from('organizations').select('id', { count: 'exact', head: true })
+      .gte('created_at', sixtyDaysAgo)
+      .lt('created_at', thirtyDaysAgo),
+    supabase.from('donors').select('id', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo),
+    // Sprint 4J — Comptage opps par thématique (pour les SECTORS réels)
+    supabase.from('opportunity_themes')
+      .select('themes!inner(slug, name_fr), opportunities!inner(id, published_at, status, is_test, duplicate_of_id, deadline)')
+      .eq('opportunities.status', 'published')
+      .is('opportunities.duplicate_of_id', null)
+      .or('opportunities.is_test.is.null,opportunities.is_test.eq.false', { foreignTable: 'opportunities' })
+      .limit(2000),
+    // Sprint 4J — Sparkline : opps publiées par jour sur les 19 derniers jours
+    supabase.from('opportunities')
+      .select('published_at, created_at')
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
+      .gte('created_at', nineteenDaysAgo),
+    // Sprint 4J — Activity feed : derniers opps publiés
+    supabase.from('opportunities')
+      .select('id, title, published_at, created_at, donors(name)')
+      .eq('status', 'published')
+      .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
+      .order('published_at', { ascending: false, nullsLast: true })
+      .order('created_at', { ascending: false })
+      .limit(4),
+    // Sprint 4J — Activity feed : opps vérifiées récemment
+    supabase.from('opportunities')
+      .select('id, title, donors(name), updated_at')
+      .eq('status', 'published')
+      .eq('verified', true)
+      .or('is_test.is.null,is_test.eq.false')
+      .is('duplicate_of_id', null)
+      .order('updated_at', { ascending: false })
+      .limit(2),
   ]);
+
+  // Sprint 4J — Sectors réels : agrégation par slug + delta 30j vs 30j précédents
+  const sectorCountsAll = new Map();      // slug → { label, total, last30, prev30 }
+  const thirtyDaysAgoMs = now.getTime() - 30 * 86400000;
+  const sixtyDaysAgoMs = now.getTime() - 60 * 86400000;
+  for (const row of themesWithCounts || []) {
+    const t = row.themes;
+    const o = row.opportunities;
+    if (!t?.slug || !o) continue;
+    // exclure expirées
+    if (o.deadline && new Date(o.deadline) < now) continue;
+    if (!sectorCountsAll.has(t.slug)) {
+      sectorCountsAll.set(t.slug, { slug: t.slug, label: t.name_fr || t.slug, count: 0, last30: 0, prev30: 0 });
+    }
+    const bucket = sectorCountsAll.get(t.slug);
+    bucket.count += 1;
+    const ref = o.published_at ? new Date(o.published_at).getTime() : (o.created_at ? new Date(o.created_at).getTime() : null);
+    if (ref !== null) {
+      if (ref >= thirtyDaysAgoMs) bucket.last30 += 1;
+      else if (ref >= sixtyDaysAgoMs) bucket.prev30 += 1;
+    }
+  }
+  // Priorité visuelle : on garde d'abord les slugs prioritaires (ordre du tableau),
+  // puis on complète par volume si la priorité est <6.
+  const priorityHits = PRIORITY_SECTOR_SLUGS
+    .map((slug) => sectorCountsAll.get(slug))
+    .filter(Boolean);
+  const fillers = Array.from(sectorCountsAll.values())
+    .filter((s) => !PRIORITY_SECTOR_SLUGS.includes(s.slug))
+    .sort((a, b) => b.count - a.count);
+  const SECTORS = [...priorityHits, ...fillers].slice(0, 6).map((s) => {
+    let delta = null;
+    if (s.prev30 > 0) {
+      const pct = Math.round(((s.last30 - s.prev30) / s.prev30) * 100);
+      delta = pct === 0 ? null : `${pct > 0 ? '+' : ''}${pct}%`;
+    } else if (s.last30 > 0) {
+      delta = `+${s.last30}`;
+    }
+    return { slug: s.slug, label: s.label, count: s.count, delta };
+  });
+
+  // Sprint 4J — Sparkline réelle (19 derniers jours, count par jour)
+  const sparkBuckets = new Array(19).fill(0);
+  for (const row of dailyPublishedRaw || []) {
+    const ref = row.published_at || row.created_at;
+    if (!ref) continue;
+    const dayIndex = 18 - Math.floor((now.getTime() - new Date(ref).getTime()) / 86400000);
+    if (dayIndex >= 0 && dayIndex < 19) sparkBuckets[dayIndex] += 1;
+  }
+  const SPARKLINE_DATA = sparkBuckets.length > 0 ? sparkBuckets : [0];
+  const sparkThisWeek = sparkBuckets.slice(-7).reduce((a, b) => a + b, 0);
+
+  // Sprint 4J — Activity feed réel
+  function relativeTime(iso) {
+    if (!iso) return '';
+    const diffH = (Date.now() - new Date(iso).getTime()) / 36e5;
+    if (diffH < 1) return 'à l\'instant';
+    if (diffH < 24) return `il y a ${Math.round(diffH)} h`;
+    const days = Math.round(diffH / 24);
+    if (days === 1) return 'hier';
+    if (days < 7) return `il y a ${days} j`;
+    return formatDate(iso);
+  }
+  const RECENT_ACTIVITY = [];
+  (recentPublished || []).slice(0, 3).forEach((o) => {
+    const donor = o.donors?.name ? `${o.donors.name} — ` : '';
+    RECENT_ACTIVITY.push({ type: 'new', title: `${donor}${o.title}`, time: relativeTime(o.published_at || o.created_at) });
+  });
+  (recentVerified || []).slice(0, 2).forEach((o) => {
+    const donor = o.donors?.name ? `${o.donors.name} — ` : '';
+    RECENT_ACTIVITY.push({ type: 'validated', title: `${donor}${o.title} vérifiée`, time: relativeTime(o.updated_at) });
+  });
+  // Tri par récence
+  RECENT_ACTIVITY.sort(() => 0); // déjà à peu près en ordre — pas de tri strict, on s'appuie sur les queries
+
+  // Sprint 4J — Deltas StatTile (croissance mensuelle réelle)
+  const oppDeltaPct = newOppsPrevMonth > 0
+    ? Math.round(((newOppsThisMonth - newOppsPrevMonth) / newOppsPrevMonth) * 100)
+    : (newOppsThisMonth > 0 ? null : null);
+  const oppDeltaLabel = oppDeltaPct !== null && oppDeltaPct !== 0
+    ? `${oppDeltaPct > 0 ? '+' : ''}${oppDeltaPct}%`
+    : (newOppsThisMonth > 0 ? `+${newOppsThisMonth} ces 30j` : null);
+  const orgDeltaPct = newOrgsPrevMonth > 0
+    ? Math.round(((newOrgsThisMonth - newOrgsPrevMonth) / newOrgsPrevMonth) * 100)
+    : null;
+  const orgDeltaLabel = orgDeltaPct !== null && orgDeltaPct !== 0
+    ? `${orgDeltaPct > 0 ? '+' : ''}${orgDeltaPct}%`
+    : (newOrgsThisMonth > 0 ? `+${newOrgsThisMonth} ces 30j` : null);
+  const donorDeltaLabel = newDonorsThisMonth > 0 ? `+${newDonorsThisMonth}` : null;
 
   const TRUST_STATS = [
     { value: oppCount || 0, label: 'Opportunités publiées' },
@@ -140,7 +276,7 @@ export default async function HomePage() {
                 <div className="h-12 w-px bg-ink-100" />
                 <div>
                   <p className="text-2xs font-black uppercase tracking-widest text-ink-500">Cette semaine</p>
-                  <p className="font-display text-3xl font-black"><AnimatedCounter value={SPARKLINE_DATA.at(-1)} suffix=" nouvelles" /></p>
+                  <p className="font-display text-3xl font-black"><AnimatedCounter value={sparkThisWeek} suffix=" nouvelles" /></p>
                 </div>
                 <Sparkline data={SPARKLINE_DATA} width={140} height={48} />
               </div>
@@ -160,20 +296,29 @@ export default async function HomePage() {
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {(featured || []).slice(0, 3).map((it, i) => (
-                    <div key={it.id} className="flex items-center gap-4 rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/20 text-base font-black text-brand-400">
-                        {String(i + 1).padStart(2, '0')}
+                  {(featured || []).slice(0, 3).map((it, i) => {
+                    const days = it.deadline ? Math.max(0, Math.ceil((new Date(it.deadline) - now) / 86400000)) : null;
+                    return (
+                      <div key={it.id} className="flex items-center gap-4 rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/20 text-base font-black text-brand-400">
+                          {String(i + 1).padStart(2, '0')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-white">{it.title}</p>
+                          <p className="mt-0.5 text-xs text-white/50">{it.donors?.name || 'Bailleur'} · {formatDate(it.deadline)}</p>
+                        </div>
+                        {days !== null && (
+                          <span className={`rounded-full px-2.5 py-1 text-2xs font-black uppercase tracking-widest ${
+                            days <= 7 ? 'bg-rose-500/20 text-rose-300'
+                            : days <= 30 ? 'bg-amber-500/20 text-amber-300'
+                            : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>
+                            {days}j
+                          </span>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-white">{it.title}</p>
-                        <p className="mt-0.5 text-xs text-white/50">{it.donors?.name || 'Bailleur'} · {formatDate(it.deadline)}</p>
-                      </div>
-                      <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-2xs font-black uppercase tracking-widest text-emerald-400">
-                        +{85 + i * 4}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {(!featured || featured.length === 0) && (
                     <div className="rounded-2xl bg-white/5 p-6 text-center">
                       <p className="text-sm text-white/60">Aucune opportunité publiée. Lancez la collecte depuis l'admin.</p>
@@ -210,25 +355,34 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-6 pt-16">
         <div className="surface-elevated overflow-hidden">
           <div className="grid md:grid-cols-[1.25fr_1fr]">
-            {/* Partenaires bêta + écosystème */}
+            {/* Sprint 4J — Bêta privée : message honnête, pas de fake partners */}
             <div className="border-b border-ink-100 p-7 sm:p-9 md:border-b-0 md:border-r">
-              <p className="eyebrow">Confiance & transparence</p>
+              <p className="eyebrow">Bêta privée · early access</p>
               <h3 className="mt-3 font-display text-2xl font-black tracking-tight">
-                Des associations marocaines à impact, déjà à bord.
+                Funding Watch est en bêta — pour les pionniers de la société civile marocaine.
               </h3>
               <p className="mt-2 text-sm leading-6 text-ink-500">
-                Bêta privée en cours : une sélection d'organisations de la société civile teste la plateforme au quotidien et oriente la feuille de route.
+                Quelques places sont ouvertes pour les premières associations qui veulent tester la plateforme, accéder aux fonctionnalités IA en avant-première et orienter directement la feuille de route.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {BETA_PARTNERS.map((p) => (
-                  <div key={p} className="flex items-center gap-2 rounded-2xl border border-ink-100 bg-ink-50 px-3.5 py-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-grad-brand text-2xs font-black text-white">
-                      {p.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-                    </span>
-                    <span className="text-sm font-bold text-ink-700">{p}</span>
-                  </div>
-                ))}
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+                  <p className="text-2xs font-black uppercase tracking-widest text-emerald-700">✓ Inclus dans la bêta</p>
+                  <p className="mt-1 text-xs leading-5 text-ink-700">
+                    Veille active, scoring IA, AI co-writer, suivi candidatures, alertes ciblées.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3">
+                  <p className="text-2xs font-black uppercase tracking-widest text-amber-700">→ Ce qu'on attend de toi</p>
+                  <p className="mt-1 text-xs leading-5 text-ink-700">
+                    Feedback bi-mensuel, tester les nouvelles fonctionnalités, partager tes outcomes (won/lost).
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Link href="/register" className="btn-primary text-2xs uppercase tracking-widest">Demander un accès →</Link>
+                <Link href="/contact" className="text-2xs font-black uppercase tracking-widest text-ink-500 hover:text-brand-700">Nous écrire →</Link>
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink-100 pt-5">
@@ -273,10 +427,34 @@ export default async function HomePage() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <StatTile label="Opportunités actives" value={oppCount || 0} delta="+18%" icon="🎯" hint="dernières 30 jours" />
-          <StatTile label="Bailleurs référencés" value={donorCount || 0} delta="+5" deltaPositive icon="🏛️" hint="nouveaux ce mois" />
-          <StatTile label="Associations inscrites" value={orgCount || 0} delta="+24%" icon="🤝" hint="croissance mensuelle" />
-          <StatTile label="Thématiques suivies" value={themes?.length || 12} icon="🏷️" hint="catégories actives" />
+          <StatTile
+            label="Opportunités actives"
+            value={oppCount || 0}
+            delta={oppDeltaLabel}
+            icon="🎯"
+            hint={newOppsThisMonth > 0 ? `${newOppsThisMonth} nouv. ces 30j` : 'dernières 30 jours'}
+          />
+          <StatTile
+            label="Bailleurs référencés"
+            value={donorCount || 0}
+            delta={donorDeltaLabel}
+            deltaPositive
+            icon="🏛️"
+            hint={newDonorsThisMonth > 0 ? `${newDonorsThisMonth} ajouté(s) ce mois` : 'sources institutionnelles'}
+          />
+          <StatTile
+            label="Associations inscrites"
+            value={orgCount || 0}
+            delta={orgDeltaLabel}
+            icon="🤝"
+            hint={newOrgsThisMonth > 0 ? `${newOrgsThisMonth} inscrites ces 30j` : 'sur la plateforme'}
+          />
+          <StatTile
+            label="Thématiques suivies"
+            value={themes?.length || 0}
+            icon="🏷️"
+            hint="catégories actives"
+          />
         </div>
 
         {/* Secteurs populaires */}
@@ -285,18 +463,26 @@ export default async function HomePage() {
             <h3 className="font-display text-2xl font-black">Secteurs les plus financés</h3>
             <Link href="/themes" className="text-2xs font-black uppercase tracking-widest text-brand-700 hover:underline">Tous les secteurs →</Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {SECTORS.map((s) => (
-              <Link key={s.slug} href={`/opportunities?theme=${s.slug}`} className="surface-elevated lift p-5">
-                <div className="flex items-center justify-between">
-                  <p className="font-display text-lg font-black">{s.label}</p>
-                  <span className="chip-success">{s.delta}</span>
-                </div>
-                <p className="mt-3 font-display text-3xl font-black text-brand-700"><AnimatedCounter value={s.count} /></p>
-                <p className="mt-1 text-xs text-ink-500">opportunités actives</p>
-              </Link>
-            ))}
-          </div>
+          {SECTORS.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SECTORS.map((s) => (
+                <Link key={s.slug} href={`/opportunities?theme=${s.slug}`} className="surface-elevated lift p-5">
+                  <div className="flex items-center justify-between">
+                    <p className="font-display text-lg font-black">{s.label}</p>
+                    {s.delta && (
+                      <span className={s.delta.startsWith('-') ? 'chip-warn' : 'chip-success'}>{s.delta}</span>
+                    )}
+                  </div>
+                  <p className="mt-3 font-display text-3xl font-black text-brand-700"><AnimatedCounter value={s.count} /></p>
+                  <p className="mt-1 text-xs text-ink-500">opportunités actives</p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="surface-elevated p-8 text-center text-sm text-ink-500">
+              Les compteurs par secteur s'activeront dès qu'il y aura des opportunités classées par thématique.
+            </div>
+          )}
         </div>
       </section>
 
@@ -340,10 +526,16 @@ export default async function HomePage() {
           <div className="card flex flex-col">
             <div className="flex items-center justify-between">
               <p className="eyebrow">Activité plateforme</p>
-              <span className="chip">{RECENT_ACTIVITY.length} aujourd'hui</span>
+              {RECENT_ACTIVITY.length > 0 && (
+                <span className="chip">{freshOppCount || RECENT_ACTIVITY.length} cette semaine</span>
+              )}
             </div>
             <h3 className="mt-3 mb-6 font-display text-2xl font-black">Dernières mises à jour</h3>
-            <ActivityFeed items={RECENT_ACTIVITY} />
+            {RECENT_ACTIVITY.length > 0 ? (
+              <ActivityFeed items={RECENT_ACTIVITY} />
+            ) : (
+              <p className="text-sm text-ink-500">Aucune nouveauté à afficher. Reviens dans quelques heures — les scrapers tournent en continu.</p>
+            )}
             <Link href="/dashboard" className="mt-6 inline-flex items-center justify-center gap-2 self-start text-2xs font-black uppercase tracking-widest text-brand-700 hover:underline">
               Accéder à mon activité →
             </Link>
@@ -399,30 +591,44 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============== TESTIMONIALS ============== */}
+      {/* ============== POURQUOI MAINTENANT (remplace les fausses testimonials) ============== */}
       <section className="relative bg-grad-light py-20">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-12 text-center">
-            <p className="eyebrow justify-center">Ils nous font confiance</p>
+            <p className="eyebrow justify-center">Pourquoi maintenant</p>
             <h2 className="mt-3 mx-auto max-w-3xl font-display text-4xl font-black tracking-tight lg:text-5xl">
-              Plus de <span className="text-brand-700">{orgCount || 100}</span> associations utilisent Funding Watch.
+              Le bon timing pour <span className="text-brand-700">prendre une longueur d'avance</span> sur les financements 2026.
             </h2>
+            <p className="mt-4 mx-auto max-w-2xl text-base leading-7 text-ink-500">
+              Nous lançons Funding Watch en bêta privée parce que l'écosystème marocain manque cruellement d'outils de veille structurée. Voici ce qu'on apporte aux premières associations qui rejoignent.
+            </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <figure key={i} className="surface-elevated p-7">
-                <span className="font-display text-5xl font-black text-brand-300">"</span>
-                <blockquote className="mt-2 text-base leading-7 text-ink-700">{t.quote}</blockquote>
-                <figcaption className="mt-5 flex items-center gap-3 border-t border-ink-100 pt-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-grad-brand font-bold text-white">{t.name[0]}</span>
-                  <div>
-                    <p className="text-sm font-bold">{t.name}</p>
-                    <p className="text-xs text-ink-500">{t.role}</p>
-                  </div>
-                </figcaption>
-              </figure>
-            ))}
+            <div className="surface-elevated p-7">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-2xl">⏱️</div>
+              <h3 className="font-display text-lg font-black">Gagne des semaines de recherche</h3>
+              <p className="mt-2 text-sm leading-6 text-ink-500">
+                Nos scrapers parcourent {donorCount || 'des dizaines de'} bailleurs en continu. Tu reçois ce qui te correspond, classé par compatibilité, sans passer tes vendredis à googler.
+              </p>
+            </div>
+            <div className="surface-elevated p-7">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-2xl">🎯</div>
+              <h3 className="font-display text-lg font-black">Un scoring qui parle ton métier</h3>
+              <p className="mt-2 text-sm leading-6 text-ink-500">
+                Matching vectoriel sur ton profil exact (thématiques, budget, expérience). Pas de mots-clés naïfs : la similarité sémantique repère les opportunités même quand le vocabulaire diverge.
+              </p>
+            </div>
+            <div className="surface-elevated p-7">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-2xl">🤝</div>
+              <h3 className="font-display text-lg font-black">Influence la roadmap</h3>
+              <p className="mt-2 text-sm leading-6 text-ink-500">
+                En bêta tu parles directement à l'équipe. Tes besoins remontent en feature requests, pas dans une file d'attente anonyme. Les fonctionnalités IA récentes (PDF intel, collab reco) viennent de feedbacks utilisateurs.
+              </p>
+            </div>
           </div>
+          <p className="mt-10 text-center text-xs italic text-ink-400">
+            Les témoignages utilisateurs apparaîtront ici dès que la bêta privée aura généré assez de retours. On préfère attendre les vrais.
+          </p>
         </div>
       </section>
 
