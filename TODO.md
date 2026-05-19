@@ -19,6 +19,11 @@ Liste vivante des actions à faire avant le lancement bêta public.
   les invitations échouent silencieusement et `/invite/[token]` renvoie
   "invitation introuvable".
 
+- [ ] **Exécuter `supabase/migration_v22.sql`** dans Supabase SQL Editor
+  — Crée la table `beta_feedback` (Sprint 4M : passage version bêta).
+  Sans v22, le widget feedback flottant renvoie "système pas prêt" et
+  `/admin/feedback` affiche un warning ambre. Idempotent.
+
 - [ ] **Exécuter `supabase/migration_v21.sql`** dans Supabase SQL Editor
   — Crée la RPC `find_collaborative_recommendations_for_org` (Sprint 4F :
   recommandation collaborative anonymisée). Cosine pgvector entre l'orga

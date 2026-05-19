@@ -14,7 +14,8 @@ const ITEMS = [
   { href: '/admin/users', label: 'Utilisateurs', icon: '👥' },
   { href: '/admin/logs', label: 'Logs collecte', icon: '📜' },
   { href: '/admin/emails', label: 'Emails', icon: '✉️' },
-  { href: '/admin/email-preview', label: 'Preview digest', icon: '👁️' }
+  { href: '/admin/email-preview', label: 'Preview digest', icon: '👁️' },
+  { href: '/admin/feedback', label: 'Feedback bêta', icon: '💬' }
 ];
 
 export default function AdminNav() {

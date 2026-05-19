@@ -17,6 +17,7 @@ import DonorRecommendations from '@/components/dashboard/DonorRecommendations';
 import DeadlineTimeline from '@/components/dashboard/DeadlineTimeline';
 import CollaborativeRecommendations from '@/components/dashboard/CollaborativeRecommendations';
 import PerfectMatchTrigger from '@/components/dashboard/PerfectMatchTrigger';
+import BetaBanner from '@/components/beta/BetaBanner';
 
 export default async function DashboardHome({ searchParams }) {
   const supabase = createClient();
@@ -236,6 +237,9 @@ export default async function DashboardHome({ searchParams }) {
 
   return (
     <div className="space-y-8">
+      {/* Sprint 4M — Bannière bêta dismissible (localStorage) */}
+      <BetaBanner />
+
       {searchParams?.welcome && (
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
           <p className="font-bold text-emerald-800">🎉 Bienvenue sur Funding Watch</p>

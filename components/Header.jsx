@@ -106,7 +106,12 @@ export default function Header() {
             <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
           </div>
           <div className="leading-tight">
-            <p className="font-display text-base font-black text-ink dark:text-white">Funding Watch</p>
+            <p className="flex items-center gap-2 font-display text-base font-black text-ink dark:text-white">
+              Funding Watch
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-700" title="Plateforme en bêta privée — vos retours sont précieux">
+                BETA
+              </span>
+            </p>
             <p className="text-2xs font-bold uppercase tracking-widest text-brand-700">Morocco · Intelligence</p>
           </div>
         </Link>
