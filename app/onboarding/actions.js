@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getEmbedding, buildOrgText } from '@/lib/embeddings';
+import { sendEmail, tplFirstMatches } from '@/lib/email';
 
 /**
  * Sauvegarde le profil orga complet à la fin du wizard.
@@ -146,6 +147,32 @@ export async function completeOnboarding(data) {
     }
   } catch (e) {
     console.warn('[onboarding] embedding failed (non-blocking):', e?.message || e);
+  }
+
+  // Sprint 4L — Email "voici tes premiers matches" (non bloquant)
+  try {
+    const { data: matches } = await supabase.rpc('match_opportunities_for_org', {
+      p_org_id: org.id,
+      p_limit: 3,
+    });
+    const tpl = tplFirstMatches({ orgName: payload.name, matches: matches || [] });
+    await sendEmail({
+      to: user.email,
+      subject: tpl.subject,
+      htmlContent: tpl.htmlContent,
+    });
+    // Best-effort log
+    try {
+      await supabase.from('email_logs').insert({
+        recipient: user.email,
+        template: 'first_matches',
+        subject: tpl.subject,
+        status: 'sent',
+        organization_id: org.id,
+      });
+    } catch {}
+  } catch (e) {
+    console.warn('[onboarding] first-matches email failed (non-blocking):', e?.message || e);
   }
 
   revalidatePath('/dashboard');

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Alert, Button, Input, Select } from '@/components/ui';
+import { sendWelcomeEmail } from './actions';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -39,8 +40,19 @@ export default function RegisterPage() {
         emailRedirectTo: `${window.location.origin}/api/auth/callback`
       }
     });
+    if (error) {
+      setLoading(false);
+      return setError(error.message);
+    }
+
+    // Sprint 4L — Welcome email (non bloquant : on push même si Brevo plante)
+    sendWelcomeEmail({
+      email: form.email,
+      fullName: form.full_name,
+      orgName: form.org_name,
+    }).catch((e) => console.warn('[register] welcome email failed:', e?.message || e));
+
     setLoading(false);
-    if (error) return setError(error.message);
     router.push('/onboarding');
     router.refresh();
   }
