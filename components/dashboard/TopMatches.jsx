@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrganization } from '@/lib/auth';
+import { computeSuccessProbability } from '@/lib/probability';
 
 /**
  * Widget Top Matches — appelle la fonction SQL match_opportunities_for_org
  * et affiche les 5 meilleures correspondances avec scoring expliqué.
+ *
+ * Sprint 4H : ajoute aussi une estimation de probabilité de réussite par
+ * opp, en réutilisant le matchScore déjà connu pour éviter N appels RPC.
  */
 export default async function TopMatches({ limit = 5 }) {
   const supabase = createClient();
@@ -44,6 +48,28 @@ export default async function TopMatches({ limit = 5 }) {
     );
   }
 
+  // Sprint 4H — Probabilité de réussite par match.
+  // La RPC ne retourne pas donor_id / amount_min / amount_max → on les
+  // récupère en un batch unique avant de lancer les compute en parallèle.
+  const oppIds = matches.map((m) => m.opportunity_id);
+  const { data: oppExtras } = await supabase
+    .from('opportunities')
+    .select('id, donor_id, amount_min, amount_max')
+    .in('id', oppIds);
+  const extrasById = new Map((oppExtras || []).map((o) => [o.id, o]));
+
+  const probs = await Promise.all(
+    matches.map((m) => {
+      const ex = extrasById.get(m.opportunity_id) || {};
+      return computeSuccessProbability(
+        supabase,
+        org,
+        { id: m.opportunity_id, donor_id: ex.donor_id, amount_min: ex.amount_min, amount_max: ex.amount_max },
+        { matchScore: Number(m.final_score) || 0 }
+      ).catch(() => null);
+    })
+  );
+
   return (
     <div className="rounded-3xl border border-red-200/40 bg-gradient-to-br from-red-50/40 to-white p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -64,6 +90,10 @@ export default async function TopMatches({ limit = 5 }) {
             good: 'bg-amber-500',
             low: 'bg-slate-400',
           };
+          const prob = probs[idx];
+          const probTone = prob && prob.probability >= 55 ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+            : prob && prob.probability >= 35 ? 'text-amber-700 bg-amber-50 border-amber-200'
+            : 'text-slate-600 bg-slate-50 border-slate-200';
           return (
             <Link
               key={m.opportunity_id}
@@ -78,7 +108,7 @@ export default async function TopMatches({ limit = 5 }) {
                 <div className="truncate font-bold text-slate-950 group-hover:text-primary">
                   {m.title}
                 </div>
-                <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   {m.donor_name && <span>{m.donor_name}</span>}
                   {m.deadline && (
                     <span>
@@ -87,6 +117,14 @@ export default async function TopMatches({ limit = 5 }) {
                   )}
                   {m.morocco_eligible && (
                     <span className="rounded-full bg-red-50 px-2 py-0.5 font-bold text-primary">🇲🇦 Maroc</span>
+                  )}
+                  {prob && (
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-2xs font-black uppercase tracking-widest ${probTone}`}
+                      title={`Confiance : ${prob.confidence} (${prob.sampleSize} candidature(s) similaire(s))`}
+                    >
+                      🎯 {prob.probability}% prob.
+                    </span>
                   )}
                 </div>
                 <div className="mt-1 text-xs text-slate-400">{m.reason}</div>
