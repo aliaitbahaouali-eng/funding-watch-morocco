@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 const FIELD_LABELS = {
   action_summary: "Résumé d'action",
@@ -11,24 +11,95 @@ const FIELD_LABELS = {
   creation_year: 'Année de création',
 };
 
+const MAX_FILE_MB = 8;
+const ACCEPT = '.pdf,.txt,.md,application/pdf,text/plain,text/markdown';
+
 /**
- * DocumentIntelligence — paste de texte → extraction structurée Claude →
- * revue par l'utilisateur → application au profil organisation.
+ * DocumentIntelligence — Sprint 4G.
  *
- * Volontairement MVP sans Storage : pas d'upload PDF. L'utilisateur colle
- * son rapport d'activité ou copie son site web. Sprint suivant : ingestion
- * PDF via Supabase Storage + pdf-parse côté server.
+ * Deux entrées qui convergent vers la même review UI :
+ *   1. Upload PDF / TXT / MD → POST /api/ai/extract-document
+ *      (extraction unpdf côté serveur + Claude).
+ *   2. Paste texte brut → POST /api/ai/extract-profile.
+ *
+ * Pas de Storage persistant : le fichier upload est parsé en mémoire,
+ * jamais écrit. RGPD-friendly par défaut.
  */
 export default function DocumentIntelligence({ current = {}, applyAction }) {
+  const fileInputRef = useRef(null);
+  const [mode, setMode] = useState('upload'); // upload | paste
   const [text, setText] = useState('');
+  const [fileMeta, setFileMeta] = useState(null); // { name, sizeKb, charCount, pageCount }
   const [state, setState] = useState('idle'); // idle | extracting | extracted | error | applying | applied
   const [error, setError] = useState(null);
   const [extracted, setExtracted] = useState(null);
-  const [accepted, setAccepted] = useState({}); // { field: boolean }
+  const [accepted, setAccepted] = useState({});
+  const [dragOver, setDragOver] = useState(false);
 
-  async function onExtract() {
+  function resetReview() {
+    setExtracted(null);
+    setAccepted({});
+    setError(null);
+    setState('idle');
+  }
+
+  function describeError(json, fallback) {
+    const map = {
+      no_api_key: "L'IA n'est pas configurée côté serveur.",
+      no_credit: "Le crédit Anthropic est épuisé. Rechargez sur console.anthropic.com pour relancer l'analyse.",
+      too_short: "Le texte extrait est trop court (60 caractères minimum). Si c'est un PDF scanné, l'OCR n'est pas encore supporté.",
+      empty_input: "Aucun texte fourni.",
+      file_too_large: `Fichier trop volumineux (limite ${MAX_FILE_MB} Mo).`,
+      unsupported_mime: "Format non supporté. PDF, TXT ou Markdown uniquement.",
+      parse_failed: "Impossible de lire le contenu du fichier. Tu peux essayer en collant le texte à la main.",
+      missing_file: "Aucun fichier sélectionné.",
+      invalid_form: "Requête invalide.",
+    };
+    return map[json?.error] || fallback || "Échec de l'analyse. Réessaie dans un instant.";
+  }
+
+  function onAcceptDefaults(data) {
+    const init = {};
+    for (const k of Object.keys(data || {})) {
+      const cur = current?.[k];
+      const sug = data[k];
+      if (sug && JSON.stringify(sug) !== JSON.stringify(cur)) init[k] = true;
+    }
+    setAccepted(init);
+  }
+
+  async function onUpload(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      setError(`Fichier trop volumineux (limite ${MAX_FILE_MB} Mo).`);
+      setState('error');
+      return;
+    }
     setState('extracting');
     setError(null);
+    setExtracted(null);
+    setFileMeta({ name: file.name, sizeKb: Math.round(file.size / 1024), charCount: 0, pageCount: 0 });
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/ai/extract-document', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(describeError(json));
+      setExtracted(json.data || {});
+      setFileMeta((m) => ({ ...(m || {}), charCount: json.charCount || 0, pageCount: json.pageCount || 0 }));
+      onAcceptDefaults(json.data || {});
+      setState('extracted');
+    } catch (e) {
+      setError(e.message);
+      setState('error');
+    }
+  }
+
+  async function onExtractText() {
+    setState('extracting');
+    setError(null);
+    setExtracted(null);
+    setFileMeta(null);
     try {
       const res = await fetch('/api/ai/extract-profile', {
         method: 'POST',
@@ -36,23 +107,9 @@ export default function DocumentIntelligence({ current = {}, applyAction }) {
         body: JSON.stringify({ text }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = json.error === 'no_api_key' ? "L'IA n'est pas configurée côté serveur."
-          : json.error === 'no_credit' ? "Le crédit Anthropic est épuisé. Rechargez sur console.anthropic.com pour relancer l'analyse."
-          : json.error === 'too_short' ? "Le texte est trop court (60 caractères minimum)."
-          : json.error === 'empty_input' ? "Aucun texte fourni."
-          : "Échec de l'analyse. Réessaie dans un instant.";
-        throw new Error(msg);
-      }
+      if (!res.ok) throw new Error(describeError(json));
       setExtracted(json.data || {});
-      // Default: accept all fields where the IA returned something different from current
-      const init = {};
-      for (const k of Object.keys(json.data || {})) {
-        const cur = current?.[k];
-        const sug = json.data[k];
-        if (sug && JSON.stringify(sug) !== JSON.stringify(cur)) init[k] = true;
-      }
-      setAccepted(init);
+      onAcceptDefaults(json.data || {});
       setState('extracted');
     } catch (e) {
       setError(e.message);
@@ -81,6 +138,13 @@ export default function DocumentIntelligence({ current = {}, applyAction }) {
     setAccepted((a) => ({ ...a, [field]: !a[field] }));
   }
 
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) onUpload(file);
+  }
+
   function renderValue(v) {
     if (Array.isArray(v)) {
       return (
@@ -97,9 +161,10 @@ export default function DocumentIntelligence({ current = {}, applyAction }) {
     return <p className="mt-1 text-sm text-slate-700">{String(v || '—')}</p>;
   }
 
-  const suggestionFields = extracted ? Object.keys(extracted).filter(k => k !== 'past_projects' && k !== 'suggested_themes') : [];
+  const suggestionFields = extracted ? Object.keys(extracted).filter((k) => k !== 'past_projects' && k !== 'suggested_themes') : [];
   const hasPastProjects = extracted?.past_projects?.length > 0;
   const hasSuggestedThemes = extracted?.suggested_themes?.length > 0;
+  const busy = state === 'extracting' || state === 'applying';
 
   return (
     <div>
@@ -111,30 +176,91 @@ export default function DocumentIntelligence({ current = {}, applyAction }) {
         </div>
       </div>
       <p className="mt-2 text-xs leading-5 text-slate-500">
-        Colle ici le contenu de ton <b>rapport d'activité</b>, de tes <b>statuts</b>, de la page "À propos" de ton site,
-        ou tout document décrivant ton organisation. L'IA extrait les champs structurés que tu peux ensuite valider un par un.
+        Importe un <b>PDF</b> (rapport d'activité, statuts, brochure) ou colle directement le texte. L'IA extrait les champs
+        structurés que tu peux valider un par un avant d'écrire sur ton profil.
       </p>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={6}
-        placeholder="Colle ici le texte (rapport d'activité, présentation, statuts...)"
-        className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm leading-6 focus:border-primary focus:outline-none"
-        disabled={state === 'extracting' || state === 'applying'}
-      />
-
-      <div className="mt-2 flex flex-wrap gap-2">
+      {/* Switch mode */}
+      <div className="mt-4 inline-flex rounded-full border border-slate-200 bg-slate-50 p-1 text-2xs font-bold uppercase tracking-widest">
         <button
           type="button"
-          onClick={onExtract}
-          disabled={!text.trim() || state === 'extracting' || state === 'applying'}
-          className="btn-primary text-2xs uppercase tracking-widest disabled:opacity-50"
+          onClick={() => { setMode('upload'); resetReview(); }}
+          className={`rounded-full px-3 py-1 ${mode === 'upload' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
-          {state === 'extracting' ? 'Analyse en cours…' : '✨ Analyser le document'}
+          📄 Fichier (PDF / TXT)
         </button>
-        <span className="text-2xs text-slate-400">{text.length} caractère(s)</span>
+        <button
+          type="button"
+          onClick={() => { setMode('paste'); resetReview(); }}
+          className={`rounded-full px-3 py-1 ${mode === 'paste' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          📋 Coller du texte
+        </button>
       </div>
+
+      {/* Mode upload */}
+      {mode === 'upload' && (
+        <div className="mt-3">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition ${
+              dragOver ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+            } ${busy ? 'pointer-events-none opacity-60' : ''}`}
+          >
+            <span className="text-3xl">📄</span>
+            <p className="mt-2 text-sm font-bold text-slate-700">Dépose un fichier ici ou clique pour parcourir</p>
+            <p className="mt-1 text-2xs text-slate-400">
+              PDF, TXT ou Markdown · max {MAX_FILE_MB} Mo · jamais stocké côté serveur
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => onUpload(e.target.files?.[0])}
+              disabled={busy}
+            />
+          </div>
+          {fileMeta && (
+            <p className="mt-2 text-2xs text-slate-500">
+              <b>{fileMeta.name}</b> · {fileMeta.sizeKb} Ko
+              {fileMeta.pageCount > 0 && ` · ${fileMeta.pageCount} page${fileMeta.pageCount > 1 ? 's' : ''}`}
+              {fileMeta.charCount > 0 && ` · ${fileMeta.charCount.toLocaleString('fr-FR')} caractères extraits`}
+            </p>
+          )}
+          {state === 'extracting' && (
+            <p className="mt-2 text-2xs font-bold text-brand-600">⏳ Analyse en cours…</p>
+          )}
+        </div>
+      )}
+
+      {/* Mode paste */}
+      {mode === 'paste' && (
+        <div className="mt-3">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+            placeholder="Colle ici le texte (rapport d'activité, présentation, statuts…)"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm leading-6 focus:border-primary focus:outline-none"
+            disabled={busy}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onExtractText}
+              disabled={!text.trim() || busy}
+              className="btn-primary text-2xs uppercase tracking-widest disabled:opacity-50"
+            >
+              {state === 'extracting' ? 'Analyse en cours…' : '✨ Analyser le texte'}
+            </button>
+            <span className="text-2xs text-slate-400">{text.length} caractère(s)</span>
+          </div>
+        </div>
+      )}
 
       {state === 'error' && error && (
         <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{error}</p>

@@ -129,6 +129,13 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ## ✅ Récemment fait (à dater)
 
+- 2026-05-19 — Sprint 4G : document intelligence upload PDF/TXT/MD via
+  `/api/ai/extract-document` (unpdf côté serveur, Claude Haiku 4.5,
+  logUsage tracké). Pas de Storage persistant : parsé en mémoire, jamais écrit.
+- 2026-05-19 — Sprint 4F : recommandation collaborative anonymisée (RPC v21)
+- 2026-05-18 — Sprint 4E : donor intelligence prédictive (RPC v20)
+- 2026-05-18 — Sprint 4C : timeline deadlines + modal match parfait
+- 2026-05-18 — Sprint 4B : recherche sémantique multilingue FR/AR/EN
 - 2026-05-15 — Sprint 3a : donor intelligence sur la page opportunité
 - 2026-05-15 — Test e2e matching validé (score 45 sur opp test, fallback path OK)
 - 2026-05-15 — Migration v8 : RPC `match_opportunities_for_org` opérationnelle
