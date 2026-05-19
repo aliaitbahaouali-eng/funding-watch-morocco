@@ -105,6 +105,27 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ---
 
+## 🔵 Observabilité bêta (Sprint 4N)
+
+- [ ] **Créer compte Sentry** sur https://sentry.io (free tier 5k events/mois).
+  Créer un projet "funding-watch-morocco" type Next.js. Récupérer le DSN
+  et l'ajouter dans Vercel comme `NEXT_PUBLIC_SENTRY_DSN` (visible côté
+  client) ET `SENTRY_DSN` (côté serveur). Optionnel pour source-maps :
+  `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT`. Sans ces vars,
+  tout est no-op (zéro overhead).
+
+- [ ] **Créer compte Plausible** sur https://plausible.io (9€/mois starter)
+  OU self-host gratuit. Ajouter le domaine de prod, puis configurer la
+  variable Vercel `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=funding-watch-morocco.vercel.app`
+  (ou ton custom domain). Si self-host : aussi `NEXT_PUBLIC_PLAUSIBLE_SRC`.
+  Sans cette variable, aucun script tracker n'est injecté.
+
+- [ ] **Définir le funnel critique** dans Plausible dashboard une fois
+  configuré : Goals → Custom event → `signup_completed`, `feedback_sent`,
+  `onboarding_completed` (à wire-up dans completeOnboarding si besoin).
+
+---
+
 ## 🟡 Important avant bêta
 
 - [ ] **BREVO_API_KEY** : sans cette clé `sendEmail()` simule les envois

@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Alert, Button, Input, Select } from '@/components/ui';
 import { sendWelcomeEmail } from './actions';
+import { trackEvent } from '@/lib/analytics';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -51,6 +52,9 @@ export default function RegisterPage() {
       fullName: form.full_name,
       orgName: form.org_name,
     }).catch((e) => console.warn('[register] welcome email failed:', e?.message || e));
+
+    // Sprint 4N — track conversion
+    trackEvent('signup_completed', { props: { org_type: form.org_type } });
 
     setLoading(false);
     router.push('/onboarding');

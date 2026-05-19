@@ -2,6 +2,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import BetaFeedbackMount from '@/components/beta/BetaFeedbackMount';
+import PlausibleScript from '@/components/analytics/PlausibleScript';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -78,6 +79,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={inter.variable}>
       <body className="font-sans pb-[calc(env(safe-area-inset-bottom,0px)+56px)] md:pb-0">
+        <PlausibleScript />
         {children}
         <MobileBottomNav />
         <BetaFeedbackMount />

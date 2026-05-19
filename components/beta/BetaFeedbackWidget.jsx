@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { submitBetaFeedback } from '@/app/actions/beta-feedback';
+import { trackEvent } from '@/lib/analytics';
 
 const KIND_OPTIONS = [
   { value: 'bug', label: '🐛 Bug', desc: 'Quelque chose ne fonctionne pas' },
@@ -82,6 +83,7 @@ export default function BetaFeedbackWidget() {
       });
       if (result?.ok) {
         setState('success');
+        trackEvent('feedback_sent', { props: { kind, severity: kind === 'bug' ? severity : 'na' } });
       } else {
         throw new Error(result?.error || 'Erreur inconnue');
       }
