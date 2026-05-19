@@ -1,5 +1,6 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
+import MobileBottomNav from '@/components/MobileBottomNav';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -65,10 +66,20 @@ export const metadata = {
   },
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#cf2535',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={inter.variable}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans pb-[calc(env(safe-area-inset-bottom,0px)+56px)] md:pb-0">
+        {children}
+        <MobileBottomNav />
+      </body>
     </html>
   );
 }

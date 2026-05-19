@@ -176,7 +176,63 @@
   .sort-indicator { @apply ml-1 inline-block text-3xs text-ink-400 transition; }
   .sort-asc::after { content: '▲'; @apply text-data-600; }
   .sort-desc::after { content: '▼'; @apply text-data-600; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     MOBILE-FIRST utilities (Sprint 4K)
+     Audit §3.7 : produit doit être utilisable sur mobile en priorité.
+     Touch targets ≥ 44px (Apple HIG), texte lisible sans zoom,
+     scroll horizontal banni (overflow-x-hidden), stack vertical par défaut.
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* Container responsive — padding réduit sur mobile pour gagner de la place */
+  .container-pro { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+
+  /* Section padding — tight on mobile, généreux desktop */
+  .section-y { @apply py-6 sm:py-10 lg:py-14; }
+
+  /* Hero compaction mobile : H1 plus petit pour tenir au-dessus du fold */
+  .h1-hero { @apply font-display text-3xl font-black tracking-tighter-2 text-ink-900 sm:text-4xl lg:text-6xl; }
+  .h2-section { @apply font-display text-xl font-black tracking-tighter-2 text-ink-900 sm:text-2xl lg:text-3xl; }
+  .h3-card { @apply font-display text-base font-black tracking-tighter-2 text-ink-900 sm:text-lg; }
+
+  /* Body text — taille minimale 14px mobile pour lisibilité sans zoom */
+  .body-pro { @apply text-sm sm:text-base text-ink-600 leading-relaxed; }
+
+  /* Touch target enforcement — boutons mobile ≥ 44px hauteur */
+  .btn-touch { @apply min-h-[44px] inline-flex items-center justify-center; }
+
+  /* Card mobile-friendly — bord réduit, padding adaptatif, full-width sur mobile */
+  .card-mobile { @apply rounded-2xl border border-ink-100 bg-white p-4 sm:p-6 sm:rounded-3xl; box-shadow: var(--shadow-card); }
+
+  /* Stack — vertical par défaut (mobile), grid à partir de sm: */
+  .stack-mobile { @apply flex flex-col gap-3 sm:gap-4; }
+
+  /* Hide on mobile / desktop helpers */
+  .mobile-only { @apply block md:hidden; }
+  .desktop-only { @apply hidden md:block; }
+
+  /* Mobile drawer overlay pattern (au lieu de side nav fixe) */
+  .drawer-overlay { @apply fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-sm; }
+  .drawer-panel { @apply fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl; }
+
+  /* Tabbed mobile filters — chip horizontal scroll */
+  .scroll-chips { @apply flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+  .scroll-chips::-webkit-scrollbar { display: none; }
+  .scroll-chips > * { @apply snap-start shrink-0; }
+
+  /* Safe area iOS pour bottom bar + notch */
+  .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem); }
+  .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+
+  /* Truncate sur 2 lignes mobile (titres opps cards) */
+  .line-clamp-2-mobile { @apply line-clamp-2 sm:line-clamp-none; }
+
+  /* Bottom sheet for actions */
+  .bottom-sheet { @apply fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md rounded-t-2xl border-t border-x border-ink-200 bg-white p-4 shadow-2xl sm:hidden; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
 }
+
+/* No-scroll body when mobile drawer open (utility class added via JS) */
+body.no-scroll { overflow: hidden; }
 
 @layer utilities {
   .text-primary { color: var(--brand); }
