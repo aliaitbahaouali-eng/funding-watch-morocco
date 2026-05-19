@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrganization } from '@/lib/auth';
 import { computeCompatibility } from '@/lib/scoring';
+import { computeSuccessProbability } from '@/lib/probability';
 import { computeOrgCompleteness, formatDate, daysUntil } from '@/lib/utils';
 import StatTile from '@/components/premium/StatTile';
 import LiveBadge from '@/components/premium/LiveBadge';
@@ -60,14 +61,69 @@ export default async function DashboardHome({ searchParams }) {
   });
   const recommended = [...scored].sort((a, b) => b.score - a.score).slice(0, 4);
 
-  const [{ count: savedCount }, { count: appsCount }, { data: deadlines }] = await Promise.all([
+  // Sprint 4I — Dates clés pour deltas week-over-week
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000).toISOString();
+  const sevenMonthsAgo = new Date(now.getTime() - 210 * 86400000).toISOString();
+
+  const [
+    { count: savedCount },
+    { count: appsCount },
+    { data: deadlines },
+    { count: savedDelta },
+    { count: appsDelta },
+    { count: newOppsThisWeek },
+    { count: newOppsPrevWeek },
+    { data: trendsRaw },
+    { data: latestPublished },
+    { data: nearestSavedDeadlines },
+  ] = await Promise.all([
     supabase.from('saved_opportunities').select('id', { count: 'exact', head: true }).eq('organization_id', org.id),
     supabase.from('saved_opportunities').select('id', { count: 'exact', head: true }).eq('organization_id', org.id).in('status', ['analyzing','preparing','submitted']),
     supabase.from('saved_opportunities')
       .select('id, status, reminder_at, opportunities(id, title, deadline, donors(name))')
       .eq('organization_id', org.id)
       .order('reminder_at', { ascending: true })
-      .limit(6)
+      .limit(6),
+    // KPI deltas (week-over-week)
+    supabase.from('saved_opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', org.id)
+      .gte('saved_at', sevenDaysAgo),
+    supabase.from('saved_opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', org.id)
+      .in('status', ['analyzing','preparing','submitted'])
+      .gte('saved_at', sevenDaysAgo),
+    supabase.from('opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .gte('published_at', sevenDaysAgo),
+    supabase.from('opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .gte('published_at', fourteenDaysAgo)
+      .lt('published_at', sevenDaysAgo),
+    // Trends — 7 derniers mois
+    supabase.from('opportunities')
+      .select('published_at, created_at')
+      .gte('created_at', sevenMonthsAgo)
+      .eq('status', 'published'),
+    // Activity feed — derniers opps publiés
+    supabase.from('opportunities')
+      .select('id, title, published_at, created_at, donors(name)')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false, nullsLast: true })
+      .order('created_at', { ascending: false })
+      .limit(3),
+    // Activity feed — deadlines proches de l'orga
+    supabase.from('saved_opportunities')
+      .select('id, opportunities!inner(id, title, deadline)')
+      .eq('organization_id', org.id)
+      .gte('opportunities.deadline', new Date().toISOString().slice(0, 10))
+      .order('opportunities(deadline)', { ascending: true })
+      .limit(1),
   ]);
 
   const completeness = computeOrgCompleteness(org);
@@ -75,16 +131,29 @@ export default async function DashboardHome({ searchParams }) {
     ? Math.round(recommended.reduce((s, o) => s + o.score, 0) / recommended.length)
     : 0;
 
-  // Trends fictifs (à remplacer par vraies stats sur publication_date)
-  const trendsData = [
-    { month: 'Jan', opportunities: 32 },
-    { month: 'Fév', opportunities: 38 },
-    { month: 'Mar', opportunities: 41 },
-    { month: 'Avr', opportunities: 48 },
-    { month: 'Mai', opportunities: 56 },
-    { month: 'Jun', opportunities: 62 },
-    { month: 'Juil', opportunities: 71 }
-  ];
+  // Sprint 4I — Trends réels : group by month sur publication_date
+  const monthLabelsFr = ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
+  const trendsBuckets = new Map();
+  // Initialise 7 buckets mensuels (le plus ancien → maintenant)
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    trendsBuckets.set(key, { month: monthLabelsFr[d.getMonth()], opportunities: 0, _ym: key });
+  }
+  (trendsRaw || []).forEach((o) => {
+    const ref = o.published_at || o.created_at;
+    if (!ref) return;
+    const d = new Date(ref);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (trendsBuckets.has(key)) trendsBuckets.get(key).opportunities += 1;
+  });
+  const trendsData = Array.from(trendsBuckets.values());
+  // Pourcentage de variation sur le dernier vs avant-dernier mois (pour le chip)
+  const lastMonthCount = trendsData[trendsData.length - 1]?.opportunities || 0;
+  const prevMonthCount = trendsData[trendsData.length - 2]?.opportunities || 0;
+  const trendsPct = prevMonthCount > 0
+    ? Math.round(((lastMonthCount - prevMonthCount) / prevMonthCount) * 100)
+    : null;
 
   // Heatmap deadlines (8 semaines)
   const buckets = new Array(56).fill(0);
@@ -93,12 +162,77 @@ export default async function DashboardHome({ searchParams }) {
     if (d !== null && d >= 0 && d < 56) buckets[55 - d] += 1;
   });
 
-  const activity = [
-    { type: 'match', title: `${recommended.length} nouvelles opportunités matchent votre profil`, time: 'à l\'instant' },
-    { type: 'new', title: 'UNDP — Procurement notice 2026', time: 'il y a 1 h' },
-    { type: 'reminder', title: 'Deadline AFD dans 7 jours', time: 'il y a 2 h' },
-    { type: 'validated', title: 'EU NDICI MENA validée', time: 'hier' }
-  ];
+  // Sprint 4I — Deltas KPI réels
+  const recommendedDelta = (newOppsThisWeek || 0) - (newOppsPrevWeek || 0);
+  function deltaLabel(n, { unit = '', explicit = false } = {}) {
+    if (n === null || n === undefined || n === 0) return null;
+    const sign = n > 0 ? '+' : '';
+    return explicit ? `${sign}${n}${unit} sem.` : `${sign}${n}${unit}`;
+  }
+  const deadlinesNext30 = buckets.slice(-30).reduce((a, b) => a + b, 0);
+
+  // Sprint 4I — Activity feed réel
+  function relativeTime(iso) {
+    if (!iso) return '';
+    const diffH = (Date.now() - new Date(iso).getTime()) / 36e5;
+    if (diffH < 1) return 'à l\'instant';
+    if (diffH < 24) return `il y a ${Math.round(diffH)} h`;
+    const days = Math.round(diffH / 24);
+    if (days === 1) return 'hier';
+    if (days < 7) return `il y a ${days} j`;
+    return formatDate(iso);
+  }
+  const activity = [];
+  if (recommended.length > 0) {
+    activity.push({
+      type: 'match',
+      title: `${recommended.length} opportunités matchent votre profil`,
+      time: 'à l\'instant',
+    });
+  }
+  (latestPublished || []).slice(0, 2).forEach((o) => {
+    const donor = o.donors?.name ? `${o.donors.name} — ` : '';
+    activity.push({
+      type: 'new',
+      title: `${donor}${o.title}`,
+      time: relativeTime(o.published_at || o.created_at),
+    });
+  });
+  const nearestSaved = (nearestSavedDeadlines || []).find((s) => s.opportunities);
+  if (nearestSaved?.opportunities?.deadline) {
+    const d = daysUntil(nearestSaved.opportunities.deadline);
+    if (d !== null && d >= 0) {
+      activity.push({
+        type: 'reminder',
+        title: d === 0
+          ? `Deadline aujourd'hui : ${nearestSaved.opportunities.title}`
+          : `Deadline dans ${d}j : ${nearestSaved.opportunities.title}`,
+        time: 'suivi en cours',
+      });
+    }
+  }
+  if (activity.length === 0) {
+    activity.push({ type: 'match', title: 'Aucune activité récente — reviens dans quelques heures.', time: '' });
+  }
+
+  // Sprint 4H+4I — Probabilité de réussite calculée pour chaque carte legacy reco.
+  // Réutilise le score déjà computé (computeCompatibility) en matchScore pour
+  // éviter de re-déclencher la RPC.
+  const recommendedWithProb = await Promise.all(
+    recommended.map(async (it) => {
+      try {
+        const prob = await computeSuccessProbability(
+          supabase,
+          org,
+          { id: it.id, donor_id: it.donor_id, amount_min: it.amount_min, amount_max: it.amount_max },
+          { matchScore: it.score }
+        );
+        return { ...it, _probability: prob };
+      } catch {
+        return it;
+      }
+    })
+  );
 
   return (
     <div className="space-y-8">
@@ -134,10 +268,33 @@ export default async function DashboardHome({ searchParams }) {
 
       {/* KPIs */}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Recommandées" value={recommended.length} delta="+24%" icon="🎯" hint="vs sem. dernière" />
-        <StatTile label="Sauvegardées" value={savedCount ?? 0} icon="⭐" hint="dans votre vault" />
-        <StatTile label="Candidatures actives" value={appsCount ?? 0} delta="+3" icon="📋" hint="en suivi" />
-        <StatTile label="Deadlines à 30j" value={buckets.slice(-30).reduce((a, b) => a + b, 0)} icon="🔥" hint="dans votre veille" />
+        <StatTile
+          label="Recommandées"
+          value={recommended.length}
+          delta={deltaLabel(recommendedDelta)}
+          icon="🎯"
+          hint={newOppsThisWeek > 0 ? `${newOppsThisWeek} nouv. cette semaine` : 'aucune cette semaine'}
+        />
+        <StatTile
+          label="Sauvegardées"
+          value={savedCount ?? 0}
+          delta={deltaLabel(savedDelta)}
+          icon="⭐"
+          hint={savedDelta > 0 ? `${savedDelta} ajout(s) 7j` : 'dans votre vault'}
+        />
+        <StatTile
+          label="Candidatures actives"
+          value={appsCount ?? 0}
+          delta={deltaLabel(appsDelta)}
+          icon="📋"
+          hint={appsDelta > 0 ? `${appsDelta} nouv. ces 7j` : 'en suivi'}
+        />
+        <StatTile
+          label="Deadlines à 30j"
+          value={deadlinesNext30}
+          icon="🔥"
+          hint={deadlinesNext30 > 0 ? 'dans votre veille' : 'rien d\'urgent'}
+        />
       </div>
 
       {/* ⚡ NOUVEAU — Top Matches IA (matching vectoriel réel) */}
@@ -170,8 +327,8 @@ export default async function DashboardHome({ searchParams }) {
           </div>
         )}
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          {recommended.map((it, i) => <OpportunityCardPremium key={it.id} item={it} variant={i === 0 ? 'highlight' : 'default'} />)}
-          {recommended.length === 0 && <p className="col-span-2 text-sm text-ink-500">Aucune opportunité disponible pour l'instant.</p>}
+          {recommendedWithProb.map((it, i) => <OpportunityCardPremium key={it.id} item={it} variant={i === 0 ? 'highlight' : 'default'} probability={it._probability} />)}
+          {recommendedWithProb.length === 0 && <p className="col-span-2 text-sm text-ink-500">Aucune opportunité disponible pour l'instant.</p>}
         </div>
       </div>
 
@@ -183,7 +340,11 @@ export default async function DashboardHome({ searchParams }) {
               <p className="eyebrow">Tendances</p>
               <h3 className="mt-2 font-display text-xl font-black">Opportunités publiées par mois</h3>
             </div>
-            <span className="chip-success">↑ +18%</span>
+            {trendsPct !== null && (
+              <span className={trendsPct >= 0 ? 'chip-success' : 'chip-warn'}>
+                {trendsPct >= 0 ? '↑' : '↓'} {trendsPct >= 0 ? '+' : ''}{trendsPct}%
+              </span>
+            )}
           </div>
           <div className="mt-4">
             <TrendsChart data={trendsData} />

@@ -3,7 +3,7 @@ import ScoreRing from './ScoreRing';
 import { formatDate, daysUntil, formatAmount, truncate, opportunityStatus } from '@/lib/utils';
 
 /** Carte d'opportunité premium type Devex/LinkedIn. */
-export default function OpportunityCardPremium({ item, variant = 'default' }) {
+export default function OpportunityCardPremium({ item, variant = 'default', probability = null }) {
   const status = opportunityStatus(item.deadline, item.status);
   const days = daysUntil(item.deadline);
 
@@ -11,6 +11,11 @@ export default function OpportunityCardPremium({ item, variant = 'default' }) {
     status === 'urgent' ? { label: `🔥 ${days}j restants`, classes: 'bg-amber-50 text-amber-700' } :
     status === 'expired' ? { label: 'Expiré', classes: 'bg-ink-100 text-ink-500' } :
     { label: 'Ouvert', classes: 'bg-emerald-50 text-emerald-700' };
+
+  // Sprint 4H + 4I — probability badge inline si fournie
+  const probTone = probability && probability.probability >= 55 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : probability && probability.probability >= 35 ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : 'bg-slate-50 text-slate-600 border-slate-200';
 
   return (
     <article className={`group relative lift overflow-hidden rounded-3xl border border-ink-100 bg-white p-6 shadow-card ${variant === 'highlight' ? 'border-gradient' : ''}`}>
@@ -24,6 +29,14 @@ export default function OpportunityCardPremium({ item, variant = 'default' }) {
             {item.morocco_eligible && <span className="chip-brand">🇲🇦 Maroc</span>}
             {item.verified && <span className="chip-success">✓ Vérifié</span>}
             {item.type && <span className="chip">{item.type}</span>}
+            {probability && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-2xs font-black uppercase tracking-widest ${probTone}`}
+                title={`Probabilité de réussite estimée — confiance ${probability.confidence}`}
+              >
+                🎯 {probability.probability}% prob.
+              </span>
+            )}
           </div>
 
           {item.donors?.name && (
