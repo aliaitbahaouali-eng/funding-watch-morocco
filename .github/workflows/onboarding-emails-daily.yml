@@ -1,0 +1,45 @@
+name: Onboarding emails (J+3/+5/+7/+14)
+
+# Backup quotidien si le cron Vercel /api/cron/onboarding-emails ne se déclenche pas
+# (limite Hobby tier). Tourne à 07:35 UTC chaque jour, 5 min après le cron Vercel
+# pour éviter un double envoi (dedup côté DB via email_logs.template de toute façon).
+
+on:
+  schedule:
+    - cron: '35 7 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no email actually sent)'
+        required: false
+        default: 'false'
+      cohort:
+        description: 'Only process this cohort (3, 5, 7 or 14)'
+        required: false
+        default: ''
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit /api/cron/onboarding-emails
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          COHORT: ${{ github.event.inputs.cohort || '' }}
+        run: |
+          QS=""
+          if [ "$DRY_RUN" = "true" ]; then QS="?dry=1"; fi
+          if [ -n "$COHORT" ]; then
+            if [ -z "$QS" ]; then QS="?cohort=$COHORT"; else QS="${QS}&cohort=$COHORT"; fi
+          fi
+          echo "POST ${APP_URL}/api/cron/onboarding-emails${QS}"
+          RESP=$(curl -sS -w "\n%{http_code}" -X POST \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/onboarding-emails${QS}")
+          BODY=$(echo "$RESP" | head -n -1)
+          CODE=$(echo "$RESP" | tail -n 1)
+          echo "HTTP $CODE"
+          echo "$BODY" | head -c 2000
+          if [ "$CODE" != "200" ]; then exit 1; fi
