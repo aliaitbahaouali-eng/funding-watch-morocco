@@ -17,6 +17,7 @@ const COLS = [
   { title: 'Produit', links: [
     { href: '/pricing', label: 'Tarifs' },
     { href: '/about', label: 'À propos' },
+    { href: '/help', label: 'Centre d\'aide' },
     { href: '/contact', label: 'Contact' },
     { href: '/register', label: 'Créer un compte' }
   ]},
