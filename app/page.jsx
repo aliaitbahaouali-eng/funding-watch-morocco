@@ -332,12 +332,22 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              <div className="absolute -bottom-4 -left-4 flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-card-hover">
-                <span className="flex -space-x-2">
-                  {['#cf2535','#0e9f6e','#f59f00'].map((c, i) => <span key={i} className="h-7 w-7 rounded-full border-2 border-white" style={{ background: c }} />)}
-                </span>
-                <p className="text-xs font-bold text-ink-700"><AnimatedCounter value={orgCount || 0} /> associations actives</p>
-              </div>
+              {orgCount > 4 ? (
+                <div className="absolute -bottom-4 -left-4 flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-card-hover">
+                  <span className="flex -space-x-2">
+                    {['#cf2535','#0e9f6e','#f59f00'].map((c, i) => <span key={i} className="h-7 w-7 rounded-full border-2 border-white" style={{ background: c }} />)}
+                  </span>
+                  <p className="text-xs font-bold text-ink-700"><AnimatedCounter value={orgCount} /> associations actives</p>
+                </div>
+              ) : (
+                <div className="absolute -bottom-4 -left-4 flex items-center gap-2 rounded-full bg-grad-brand px-4 py-2 text-white shadow-glow-brand">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                  </span>
+                  <p className="text-xs font-black uppercase tracking-wider">Bêta privée · Places limitées</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
