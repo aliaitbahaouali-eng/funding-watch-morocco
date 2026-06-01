@@ -7,6 +7,23 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ## 🔴 Bloquants avant bêta publique
 
+- [ ] **Exécuter `supabase/migration_v26.sql`** dans Supabase SQL Editor
+  — Sprint 4Q : crée les tables `experts` + `expert_requests` pour la
+  marketplace d'experts (consultants montage proposition / budget /
+  legal / formation). Seed 6 profils PLACEHOLDER (status='placeholder')
+  visibles côté UI avec badge "EXEMPLE — bêta", bouton de contact
+  désactivé. Workflow : passer les placeholders en status='active' via
+  `/admin/experts` une fois qu'on recrute les vrais experts. Sans v26,
+  la section "💼 Experts" sur `/opportunities/[id]` affiche un message
+  d'attente discret.
+
+- [ ] **Recruter 5-10 vrais experts** pour remplacer les placeholders.
+  Cibles : anciens program officers AFD/UE/UNDP, juristes OSBL, formateurs
+  réseau ANSI, évaluateurs indépendants. Après recrutement : créer le
+  profil dans `/admin/experts` avec status='active' (badge "EXEMPLE"
+  disparaît automatiquement, bouton de contact activé). Les placeholders
+  sortent de la sélection quand on a ≥3 vrais experts qui matchent une opp.
+
 - [ ] **Exécuter `supabase/migration_v24.sql`** dans Supabase SQL Editor
   — Sprint 4O : étend la taxonomie de thématiques d'après feedback bêta.
   Ajoute 9 slugs (`droits-minorites`, `monoparentalite`, `sante-mentale`,

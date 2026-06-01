@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 const ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊' },
   { href: '/admin/monitoring', label: 'Monitoring veille', icon: '📡' },
+  { href: '/admin/curation', label: 'Curation IA ⭐', icon: '🤖' },
   { href: '/admin/opportunities', label: 'Opportunités', icon: '🎯' },
   { href: '/admin/validation', label: 'Validation ⚡', icon: '✅' },
   { href: '/admin/pending', label: 'À valider (legacy)', icon: '🕐' },
@@ -15,7 +16,8 @@ const ITEMS = [
   { href: '/admin/logs', label: 'Logs collecte', icon: '📜' },
   { href: '/admin/emails', label: 'Emails', icon: '✉️' },
   { href: '/admin/email-preview', label: 'Preview digest', icon: '👁️' },
-  { href: '/admin/feedback', label: 'Feedback bêta', icon: '💬' }
+  { href: '/admin/feedback', label: 'Feedback bêta', icon: '💬' },
+  { href: '/admin/experts', label: 'Experts', icon: '💼' }
 ];
 
 export default function AdminNav() {

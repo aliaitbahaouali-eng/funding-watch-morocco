@@ -5,6 +5,7 @@ import SaveButton from '@/components/opportunity/SaveButton';
 import AiCoWriter from '@/components/opportunity/AiCoWriter';
 import DonorIntelligence from '@/components/opportunity/DonorIntelligence';
 import SuccessProbability from '@/components/opportunity/SuccessProbability';
+import ExpertsForOpp from '@/components/experts/ExpertsForOpp';
 import { Badge, Score, Card } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatAmount, daysUntil, opportunityStatus, scoreTier } from '@/lib/utils';
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }) {
   const supabase = createClient();
   const { data: opp } = await supabase
     .from('opportunities')
-    .select('title, summary, donors(name), deadline, morocco_eligible')
+    .select('title, summary, donors(name), deadline, morocco_eligible, morocco_eligibility')
     .eq('id', params.id)
     .eq('status', 'published')
     .single();
@@ -34,7 +35,12 @@ export async function generateMetadata({ params }) {
   const deadlinePart = opp.deadline
     ? ` Deadline : ${new Date(opp.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
     : '';
-  const moroccoPart = opp.morocco_eligible ? ' 🇲🇦 Éligible Maroc.' : '';
+  // Sprint 5C — badge selon le niveau strict
+  const moroccoPart = opp.morocco_eligibility === 'explicit'
+    ? ' 🇲🇦 Maroc éligible.'
+    : opp.morocco_eligibility === 'regional'
+      ? ' 🌍 Région MENA/Afrique.'
+      : '';
   const description = (opp.summary || '').slice(0, 220)
     || `Opportunité de financement référencée sur Funding Watch.${deadlinePart}${moroccoPart}`.trim();
 
@@ -122,7 +128,9 @@ export default async function OpportunityDetailPage({ params }) {
                 <div className="flex flex-wrap gap-2">
                   {status === 'urgent' && <Badge tone="orange">🔥 Urgent — {days}j</Badge>}
                   {status === 'expired' && <Badge tone="slate">Expiré</Badge>}
-                  {opp.morocco_eligible && <Badge tone="green">🇲🇦 Maroc éligible</Badge>}
+                  {opp.morocco_eligibility === 'explicit' && <Badge tone="green">🇲🇦 Maroc éligible</Badge>}
+                  {opp.morocco_eligibility === 'regional' && <Badge tone="blue">🌍 Région MENA/Afrique</Badge>}
+                  {opp.morocco_eligibility === 'global' && <Badge tone="slate">🌐 Appel global</Badge>}
                   {opp.verified && <Badge tone="blue">✓ Vérifié</Badge>}
                   {opp.type && <Badge tone="slate">{opp.type}</Badge>}
                 </div>
@@ -193,6 +201,9 @@ export default async function OpportunityDetailPage({ params }) {
               {user && org && (
                 <SuccessProbability org={org} opp={opp} />
               )}
+
+              {/* Sprint 4Q — Experts marketplace */}
+              <ExpertsForOpp opp={opp} />
 
               {scoring && (
                 <Card>
