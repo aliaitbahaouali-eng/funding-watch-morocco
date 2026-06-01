@@ -44,6 +44,9 @@ INCLUDE_PATTERNS = [
     (r"\b(community-based organi[sz]ation|grassroots|local NGO|organisation de base)\b", 'Organisation communautaire'),
     (r"\b(coopératives?|cooperatives?|social enterprise|entreprises?\s+sociales?|ESS|économie\s+sociale)\b", 'ESS / coopératives'),
     (r"\b(humanitarian|development cooperation|coopération\s+(?:au\s+)?développement|aide\s+humanitaire)\b", 'Aide / coopération'),
+    # Sprint 5B — patterns spécifiques Maroc
+    (r"\b(coopérative\s+(?:agricole|féminine|artisanale|de\s+production)|GIE\s+(?:agricole|féminin)|union\s+de\s+coopératives?)\b", 'Coopérative marocaine spécifique'),
+    (r"\b(INDH|Initiative\s+Nationale|tissu\s+associatif|société\s+civile\s+marocaine)\b", 'Programme société civile Maroc'),
 ]
 
 # ============================================================

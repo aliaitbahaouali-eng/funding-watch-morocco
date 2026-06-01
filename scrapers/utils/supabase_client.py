@@ -18,6 +18,8 @@ def supabase_request(path: str, method: str = "GET", params=None, json_body=None
 
 
 def get_active_sources(parser_key: str | None = None, select: str = '*'):
+    # Sprint 5E — select='*' rapatrie aussi requires_morocco_keyword (v23).
+    # Le scraper s'en sert pour rejeter à la source les opps non Maroc/MENA.
     params = {"active": "eq.true", "order": "priority.asc", "select": select}
     if parser_key:
         params["parser_key"] = f"eq.{parser_key}"

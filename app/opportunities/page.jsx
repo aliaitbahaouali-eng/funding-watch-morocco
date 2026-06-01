@@ -53,11 +53,20 @@ export default async function OpportunitiesPage({ searchParams }) {
     query = query.or(`deadline.is.null,deadline.gte.${today}`);
   }
 
-  // ⭐ NGO-fit filter (S1) : par défaut on n'affiche que les opps pertinentes ONG
-  // (ngo_relevant=true) OU non encore classées (ngo_relevant IS NULL) pour ne rien cacher au début.
+  // ⭐ Sprint 5C — FILTRE STRICT ONG MAROCAINES par défaut
+  // Avant : on affichait aussi les ngo_relevant=null et toutes les morocco_eligibility
+  // Maintenant :
+  //   - ngo_relevant = true STRICT (plus de null)
+  //   - morocco_eligibility IN ('explicit', 'regional') strict
   // Toggle ?all=1 pour bypasser (admin/debug)
+  // Toggle ?global=1 pour inclure aussi 'global' (utile pour ONG ambitieuses)
   if (sp.all !== '1') {
-    query = query.or('ngo_relevant.is.null,ngo_relevant.eq.true');
+    query = query.eq('ngo_relevant', true);
+    if (sp.global === '1') {
+      query = query.in('morocco_eligibility', ['explicit', 'regional', 'global']);
+    } else {
+      query = query.in('morocco_eligibility', ['explicit', 'regional']);
+    }
   }
 
   // P0 keyword fallback toujours dispo. Sprint 4B : si q présent ET pas
@@ -96,7 +105,8 @@ export default async function OpportunitiesPage({ searchParams }) {
     query = query.or(`title.ilike.%${sp.q}%,summary.ilike.%${sp.q}%,description.ilike.%${sp.q}%`);
   }
   if (sp.donor && sp.donor !== 'all') query = query.eq('donor_id', sp.donor);
-  if (sp.morocco === '1') query = query.eq('morocco_eligible', true);
+  // ?morocco=1 → uniquement les opps avec mention explicite du Maroc
+  if (sp.morocco === '1') query = query.eq('morocco_eligibility', 'explicit');
   if (sp.verified === '1') query = query.eq('verified', true);
   if (sp.difficulty && sp.difficulty !== 'all') query = query.eq('difficulty_level', sp.difficulty);
   if (sp.deadline && sp.deadline !== 'all') {
@@ -124,10 +134,14 @@ export default async function OpportunitiesPage({ searchParams }) {
   }
   const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE));
 
-  // KPIs latéraux
+  // KPIs latéraux — Sprint 5C : compteur Maroc = explicit + regional (cohérent avec le défaut)
   const [{ count: morCount }, { count: verCount }] = await Promise.all([
-    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published').eq('morocco_eligible', true),
-    supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'published').eq('verified', true)
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .in('morocco_eligibility', ['explicit', 'regional']),
+    supabase.from('opportunities').select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .eq('verified', true)
   ]);
 
   return (

@@ -65,8 +65,24 @@ def run_source(source: dict, dry_run: bool, ingest: IngestClient | None, enrich_
         if enrich_items:
             items = [enrich(it) for it in items]
 
+        # Sprint 5E — Filtre strict Maroc à la source pour les sources internationales
+        # Si requires_morocco_keyword=true (sources non-Maroc), on ne garde que
+        # les items dont la classification est explicit OU regional.
+        # → coupe a la source 60-80% du bruit sur UNDP/UNICEF/EU/AFD/etc.
+        if source.get('requires_morocco_keyword'):
+            before = len(items)
+            items = [
+                it for it in items
+                if it.get('morocco_eligibility') in ('explicit', 'regional')
+                or it.get('morocco_eligible') is True  # fallback collectors legacy
+            ]
+            rejected = before - len(items)
+            if rejected > 0:
+                log.info('  → filtre Maroc strict : %d/%d items rejetes (non explicit/regional)',
+                         rejected, before)
+
         duration_ms = int((time.time() - started) * 1000)
-        log.info('  → %d item(s) en %dms (après dedup + enrich)', len(items), duration_ms)
+        log.info('  → %d item(s) en %dms (après dedup + enrich + filtre Maroc)', len(items), duration_ms)
 
         if dry_run or not ingest:
             log.info('  → DRY RUN')
