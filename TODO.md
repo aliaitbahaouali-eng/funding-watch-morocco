@@ -7,6 +7,22 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ## 🔴 Bloquants avant bêta publique
 
+- [ ] **Exécuter `supabase/migration_v24.sql`** dans Supabase SQL Editor
+  — Sprint 4O : étend la taxonomie de thématiques d'après feedback bêta.
+  Ajoute 9 slugs (`droits-minorites`, `monoparentalite`, `sante-mentale`,
+  `plaidoyer`, `justice-acces-droit`, `medias-liberte-expression`,
+  `personnes-agees`, `enfance-protection`, `handicap`). Sans v24, ces
+  thématiques n'apparaissent pas dans `/dashboard/preferences` et le
+  matching IA continue de les filtrer (allowed set client-side
+  fonctionne mais aucune asso ne peut s'y abonner). Idempotent
+  (ON CONFLICT DO NOTHING).
+
+- [ ] **Reclassifier les opps existantes** avec la taxonomie étendue.
+  Après application de v24, les opps publiées avant cette date n'ont pas
+  les nouveaux tags. Option : relancer `scripts/classify_opportunities.py`
+  ou batch SQL si crédit Anthropic dispo. Coût estimé : ~$0.01 pour 100
+  opps via Haiku 4.5.
+
 - [ ] **Exécuter `supabase/migration_v9.sql`** dans Supabase SQL Editor
   — Ajoute les colonnes WhatsApp (`whatsapp_phone`, `whatsapp_alerts_enabled`,
   `whatsapp_threshold`) sur `organizations` + la table `whatsapp_logs` avec

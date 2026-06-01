@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentOrganization } from '@/lib/auth';
 import { Card } from '@/components/ui';
 import { isValidPhone, normalizePhone } from '@/lib/whatsapp';
+import MissingThemeButton from '@/components/preferences/MissingThemeButton';
 
 export default async function PreferencesPage() {
   const supabase = createClient();
@@ -70,6 +71,7 @@ export default async function PreferencesPage() {
             ))}
           </div>
           <button className="btn-primary mt-6">Enregistrer mes préférences</button>
+          <MissingThemeButton />
         </Card>
       </form>
 
