@@ -7,6 +7,16 @@ Liste vivante des actions à faire avant le lancement bêta public.
 
 ## 🔴 Bloquants avant bêta publique
 
+- [ ] **Exécuter `supabase/migration_v27.sql`** dans Supabase SQL Editor
+  — Sprint 4P : co-soumission matchmaking. Étend `saved_opportunities`
+  avec `intent_co_submit` + `co_submit_message` + `co_submit_opt_in_at`,
+  et crée la table `co_submission_requests` (workflow sent → viewed →
+  accepted/declined/expired). RLS strictes : seuls les participants
+  (requester ou target) voient leur demande. Sans v27, le panneau
+  "🤝 Co-soumission" sur `/opportunities/[id]` affiche le toggle mais
+  l'opt-in retourne "system_not_ready". Idempotent (ADD COLUMN IF NOT
+  EXISTS + CREATE TABLE IF NOT EXISTS).
+
 - [ ] **Exécuter `supabase/migration_v26.sql`** dans Supabase SQL Editor
   — Sprint 4Q : crée les tables `experts` + `expert_requests` pour la
   marketplace d'experts (consultants montage proposition / budget /

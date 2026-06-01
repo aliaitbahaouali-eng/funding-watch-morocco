@@ -6,6 +6,7 @@ import AiCoWriter from '@/components/opportunity/AiCoWriter';
 import DonorIntelligence from '@/components/opportunity/DonorIntelligence';
 import SuccessProbability from '@/components/opportunity/SuccessProbability';
 import ExpertsForOpp from '@/components/experts/ExpertsForOpp';
+import CoSubmissionPanel from '@/components/opportunity/CoSubmissionPanel';
 import { Badge, Score, Card } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate, formatAmount, daysUntil, opportunityStatus, scoreTier } from '@/lib/utils';
@@ -103,12 +104,53 @@ export default async function OpportunityDetailPage({ params }) {
 
       const { data: existing } = await supabase
         .from('saved_opportunities')
-        .select('id')
+        .select('id, intent_co_submit, co_submit_message')
         .eq('organization_id', orgRow.id)
         .eq('opportunity_id', opp.id)
         .maybeSingle();
       alreadySaved = !!existing;
+      // Sprint 4P — opt-in state (safe even si v27 pas appliquée — columns absentes = undefined)
+      org._coSubmitOptIn = existing?.intent_co_submit === true;
+      org._coSubmitMessage = existing?.co_submit_message || '';
     }
+  }
+
+  // Sprint 4P — Co-submission peers count (visible à tous) + détails (visible si opted-in)
+  // Best-effort : si la migration v27 n'est pas appliquée, on retourne 0 / [].
+  let coSubmitPeersCount = 0;
+  let coSubmitPeers = [];
+  try {
+    const { count } = await supabase
+      .from('saved_opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('opportunity_id', opp.id)
+      .eq('intent_co_submit', true);
+    coSubmitPeersCount = Math.max(0, (count || 0) - (org?._coSubmitOptIn ? 1 : 0));
+
+    if (org?._coSubmitOptIn) {
+      const { data: peerRows } = await supabase
+        .from('saved_opportunities')
+        .select('organization_id, co_submit_message, organizations(id, name, city, organization_themes(themes(name_fr)))')
+        .eq('opportunity_id', opp.id)
+        .eq('intent_co_submit', true)
+        .neq('organization_id', org.id)
+        .limit(20);
+      coSubmitPeers = (peerRows || []).map((r) => {
+        const themes = (r.organizations?.organization_themes || [])
+          .map((ot) => ot.themes?.name_fr)
+          .filter(Boolean)
+          .slice(0, 3);
+        return {
+          id: r.organization_id,
+          name: r.organizations?.name || 'Asso',
+          city: r.organizations?.city || null,
+          themes_str: themes.join(' · '),
+          message: r.co_submit_message || null,
+        };
+      });
+    }
+  } catch {
+    // v27 pas appliquée — on garde 0 / []
   }
 
   const checklist = await generateChecklist(opp);
@@ -200,6 +242,17 @@ export default async function OpportunityDetailPage({ params }) {
             <aside className="space-y-6">
               {user && org && (
                 <SuccessProbability org={org} opp={opp} />
+              )}
+
+              {/* Sprint 4P — Co-soumission */}
+              {user && org && (
+                <CoSubmissionPanel
+                  oppId={opp.id}
+                  isOwnerOptIn={org._coSubmitOptIn}
+                  ownerMessage={org._coSubmitMessage}
+                  peers={coSubmitPeers}
+                  peersCount={coSubmitPeersCount}
+                />
               )}
 
               {/* Sprint 4Q — Experts marketplace */}
