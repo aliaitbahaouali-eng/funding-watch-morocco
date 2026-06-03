@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import { getCurrentProfile } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import CurationForm from '@/components/admin/CurationForm';
 
 export const dynamic = 'force-dynamic';
@@ -18,10 +17,8 @@ export const metadata = {
  * en pending_review et arrive directement dans /admin/validation.
  */
 export default async function CurationPage() {
-  const profile = await getCurrentProfile();
-  if (!profile || !['admin', 'veille'].includes(profile.role) || profile.status !== 'active') {
-    redirect('/login?next=/admin/curation');
-  }
+  // requireAdmin() redirige automatiquement si non admin/veille
+  await requireAdmin();
 
   const supabase = createClient();
   const startOfDay = new Date();
