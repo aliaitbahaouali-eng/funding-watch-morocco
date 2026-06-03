@@ -225,5 +225,6 @@ module.exports = {
       }
     }
   },
-  plugins: []
+  // Sprint 5B — typography pour les pages légales (/privacy, /terms, /cookies, /legal)
+  plugins: [require('@tailwindcss/typography')]
 };

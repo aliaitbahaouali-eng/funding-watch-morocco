@@ -27,6 +27,11 @@ export default async function sitemap() {
     // (pages placeholder peu actionables). Routes encore accessibles directement
     // mais plus indexées ni linkées depuis la nav.
     { url: '/community', changeFrequency: 'weekly', priority: 0.4 },
+    // Sprint 5B — pages légales
+    { url: '/privacy', changeFrequency: 'monthly', priority: 0.3 },
+    { url: '/terms', changeFrequency: 'monthly', priority: 0.3 },
+    { url: '/cookies', changeFrequency: 'monthly', priority: 0.3 },
+    { url: '/legal', changeFrequency: 'monthly', priority: 0.3 },
   ].map((p) => ({
     url: `${APP_URL}${p.url}`,
     lastModified: new Date(),

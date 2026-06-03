@@ -18,10 +18,10 @@ const COLS = [
     { href: '/register', label: 'Créer un compte' }
   ]},
   { title: 'Légal', links: [
-    { href: '#', label: 'Confidentialité' },
-    { href: '#', label: 'Conditions' },
-    { href: '#', label: 'Cookies' },
-    { href: '#', label: 'Mentions légales' }
+    { href: '/privacy', label: 'Confidentialité' },
+    { href: '/terms', label: 'Conditions' },
+    { href: '/cookies', label: 'Cookies' },
+    { href: '/legal', label: 'Mentions légales' }
   ]}
 ];
 

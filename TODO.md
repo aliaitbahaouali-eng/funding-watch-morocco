@@ -3,210 +3,198 @@
 Liste vivante des actions à faire avant le lancement bêta public.
 À mettre à jour à chaque sprint.
 
+**Dernière mise à jour** : 2026-06-01 — Sprint 5B (audit + cleanup)
+
 ---
 
-## 🔴 Bloquants avant bêta publique
+## 🔴 Bloquants immédiats (avant 1er beta-testeur)
 
-- [ ] **Exécuter `supabase/migration_v27.sql`** dans Supabase SQL Editor
-  — Sprint 4P : co-soumission matchmaking. Étend `saved_opportunities`
-  avec `intent_co_submit` + `co_submit_message` + `co_submit_opt_in_at`,
-  et crée la table `co_submission_requests` (workflow sent → viewed →
-  accepted/declined/expired). RLS strictes : seuls les participants
-  (requester ou target) voient leur demande. Sans v27, le panneau
-  "🤝 Co-soumission" sur `/opportunities/[id]` affiche le toggle mais
-  l'opt-in retourne "system_not_ready". Idempotent (ADD COLUMN IF NOT
-  EXISTS + CREATE TABLE IF NOT EXISTS).
+### Vérifications env vars Vercel
 
-- [ ] **Exécuter `supabase/migration_v26.sql`** dans Supabase SQL Editor
-  — Sprint 4Q : crée les tables `experts` + `expert_requests` pour la
-  marketplace d'experts (consultants montage proposition / budget /
-  legal / formation). Seed 6 profils PLACEHOLDER (status='placeholder')
-  visibles côté UI avec badge "EXEMPLE — bêta", bouton de contact
-  désactivé. Workflow : passer les placeholders en status='active' via
-  `/admin/experts` une fois qu'on recrute les vrais experts. Sans v26,
-  la section "💼 Experts" sur `/opportunities/[id]` affiche un message
-  d'attente discret.
+- [ ] **`BREVO_API_KEY`** — sans cette clé, `sendEmail()` simule les envois
+  (warning console `[email] BREVO_API_KEY manquant — email simulé`).
+  Welcome email, first-matches, co-soumission, expert-request : tous
+  silencieux. **Critique.**
 
-- [ ] **Recruter 5-10 vrais experts** pour remplacer les placeholders.
-  Cibles : anciens program officers AFD/UE/UNDP, juristes OSBL, formateurs
-  réseau ANSI, évaluateurs indépendants. Après recrutement : créer le
-  profil dans `/admin/experts` avec status='active' (badge "EXEMPLE"
-  disparaît automatiquement, bouton de contact activé). Les placeholders
-  sortent de la sélection quand on a ≥3 vrais experts qui matchent une opp.
+- [ ] **`ANTHROPIC_API_KEY` rechargée** — si crédit épuisé, AI co-writer,
+  document intelligence, classification taxonomique renvoient `no_credit`.
+  Recharger sur https://console.anthropic.com/settings/billing.
 
-- [ ] **Exécuter `supabase/migration_v24.sql`** dans Supabase SQL Editor
-  — Sprint 4O : étend la taxonomie de thématiques d'après feedback bêta.
-  Ajoute 9 slugs (`droits-minorites`, `monoparentalite`, `sante-mentale`,
-  `plaidoyer`, `justice-acces-droit`, `medias-liberte-expression`,
-  `personnes-agees`, `enfance-protection`, `handicap`). Sans v24, ces
-  thématiques n'apparaissent pas dans `/dashboard/preferences` et le
-  matching IA continue de les filtrer (allowed set client-side
-  fonctionne mais aucune asso ne peut s'y abonner). Idempotent
-  (ON CONFLICT DO NOTHING).
+- [ ] **`OPENAI_API_KEY`** — pour les embeddings (orgs, opps, donneurs).
+  Si quota épuisé, le matching sémantique nouvellement créées orgs
+  retombe sur le fallback taxonomy-only.
 
-- [ ] **Reclassifier les opps existantes** avec la taxonomie étendue.
-  Après application de v24, les opps publiées avant cette date n'ont pas
-  les nouveaux tags. Option : relancer `scripts/classify_opportunities.py`
-  ou batch SQL si crédit Anthropic dispo. Coût estimé : ~$0.01 pour 100
-  opps via Haiku 4.5.
+- [ ] **`SUPABASE_SERVICE_ROLE_KEY`** — sans cette clé, la co-soumission
+  ne peut pas récupérer l'email de l'asso cible et n'envoie pas d'email
+  de mise en relation. Voir aussi point ⚠ ci-dessous (à roter).
 
-- [ ] **Exécuter `supabase/migration_v9.sql`** dans Supabase SQL Editor
-  — Ajoute les colonnes WhatsApp (`whatsapp_phone`, `whatsapp_alerts_enabled`,
-  `whatsapp_threshold`) sur `organizations` + la table `whatsapp_logs` avec
-  RLS. Sans v9, le formulaire d'opt-in WhatsApp dans `/dashboard/preferences`
-  enregistre dans le vide.
+- [ ] **Vercel Production Domain** — Settings → Domains → s'assurer que
+  `funding-watch-morocco.vercel.app` est explicitement marqué Production.
+  Sinon chaque `vercel --prod` reste invisible (vécu ce matin —
+  alias manuel a été nécessaire).
 
-- [ ] **Exécuter `supabase/migration_v10.sql`** dans Supabase SQL Editor
-  — Crée les tables `organization_members` + `organization_invitations`
-  pour les comptes équipe. Sans v10, `/dashboard/team` affiche l'owner seul,
-  les invitations échouent silencieusement et `/invite/[token]` renvoie
-  "invitation introuvable".
+### Migrations Supabase encore en attente
 
-- [ ] **Exécuter `supabase/migration_v22.sql`** dans Supabase SQL Editor
-  — Crée la table `beta_feedback` (Sprint 4M : passage version bêta).
-  Sans v22, le widget feedback flottant renvoie "système pas prêt" et
-  `/admin/feedback` affiche un warning ambre. Idempotent.
+Confirmé appliquées par Cowork ✅ : v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27 + backfill donneurs 27/27.
 
-- [ ] **Exécuter `supabase/migration_v21.sql`** dans Supabase SQL Editor
-  — Crée la RPC `find_collaborative_recommendations_for_org` (Sprint 4F :
-  recommandation collaborative anonymisée). Cosine pgvector entre l'orga
-  cible et toutes les autres orgs onboardées → top pairs → aggrège leurs
-  saved_opportunities en excluant celles déjà dans son vault. Sans v21,
-  la carte « 👥 Ce que regardent les assos comme toi » du dashboard affiche
-  un message d'attente. Idempotent (CREATE OR REPLACE).
+Non confirmées appliquées — vérifier dans le SQL Editor Supabase :
 
-- [ ] **Exécuter `supabase/migration_v20.sql`** dans Supabase SQL Editor
-  — Ajoute `donors.profile_embedding` + index ivfflat + RPC
-  `find_similar_donors_for_org`. Puis lance
-  `python scripts/backfill_donor_embeddings.py` pour générer les embeddings
-  de tous les bailleurs depuis leur nom + description + opps + thématiques.
-  Sans v20 + le backfill, le widget "🔭 Bailleurs à explorer" du dashboard
-  affiche un message d'attente. Coût OpenAI : ~$0.0001 pour 9 bailleurs.
+- [ ] **`supabase/migration_v9.sql`** — colonnes WhatsApp sur
+  `organizations` + table `whatsapp_logs`. Sans v9, opt-in WhatsApp
+  dans `/dashboard/preferences` enregistre dans le vide.
 
-- [ ] **Exécuter `supabase/migration_v19.sql`** dans Supabase SQL Editor
-  — Crée la fonction `semantic_search_opportunities(query_embedding, limit, morocco_only)`
-  utilisée par la barre de recherche `/opportunities`. Sans v19, la recherche
-  retombe sur l'ancien `.ilike` keyword (qui ne capte rien en arabe ni les
-  reformulations). Idempotent (CREATE OR REPLACE).
+- [ ] **`supabase/migration_v10.sql`** — tables `organization_members` +
+  `organization_invitations` (comptes équipe). Sans v10,
+  `/dashboard/team` affiche l'owner seul.
 
-- [ ] **Exécuter `supabase/migration_v18.sql`** dans Supabase SQL Editor
-  — Crée `api_usage_logs` pour tracker précisément chaque appel Claude /
-  OpenAI / Brevo / Meta. Sans v18, `/admin/monitoring` continue d'afficher
-  les coûts estimés ; avec v18 appliquée + des appels qui passent par
-  `lib/usage-tracking.js::logUsage`, la card passe sur des coûts RÉELS
-  par appel sur 30j (breakdown par provider/kind).
+- [ ] **`supabase/migration_v11.sql`** — table `ai_response_cache`
+  (TTL 30j). Sans v11, chaque clic AI co-writer = nouvel appel facturé
+  (pas de cache hit).
 
-- [ ] **Exécuter `supabase/migration_v17.sql`** dans Supabase SQL Editor
-  — Crée `email_events` qui stocke les webhooks Brevo (opens, clicks, bounces).
-  Sans v17, `/admin/emails` affiche un warning ambre et les stats engagement
-  restent vides. Puis : configure `BREVO_WEBHOOK_SECRET` dans Vercel + Brevo
-  dashboard → Settings → Transactional → Webhooks → URL avec `?secret=`.
+- [ ] **`supabase/migration_v12.sql`** — **URGENT P0** — colonne
+  `opportunities.is_test`. Si pas appliquée, `/opportunities` et landing
+  peuvent retourner 0 opps.
 
-- [ ] **Exécuter `supabase/migration_v13.sql`** dans Supabase SQL Editor
-  — Cross-source dedup : ajoute `opportunities.duplicate_of_id` +
-  `seen_on_source_ids` + index + function `find_similar_opportunities()`
-  et **recrée** `match_opportunities_for_org` pour exclure dups + test
-  fixtures (incorporé). Une fois v13 appliqué, lance
-  `python scripts/dedup_cross_source.py` (dry-run d'abord avec `--dry-run`
-  pour voir ce qu'il marquerait) pour scanner les opps existantes.
+- [ ] **`supabase/migration_v13.sql`** — cross-source dedup (colonne
+  `duplicate_of_id` + RPC recréée). Optionnel : `python scripts/dedup_cross_source.py`
+  après.
 
-- [ ] **Exécuter `supabase/migration_v12.sql`** dans Supabase SQL Editor — **URGENT P0**
-  — Ajoute la colonne `opportunities.is_test` (boolean, default false) et
-  marque l'opp [TEST E2E] is_test=true. Sans v12, le listing `/opportunities`
-  et la landing renvoient **0 opps** (la query `.or('is_test.is.null,is_test.eq.false')`
-  échoue silencieusement → null → page affiche "Aucun résultat"). Le ticker
-  Header fait fallback sur "Veille active".
+### Test funnel à faire toi-même
 
-- [ ] **Exécuter `supabase/migration_v11.sql`** dans Supabase SQL Editor
-  — Crée la table `ai_response_cache` (TTL 30 jours sur résultats IA).
-  Sans v11, les appels au co-writer génèrent un draft mais ne le cachent
-  pas → chaque clic refait un appel Claude facturé. Une fois v11 appliqué,
-  le 2e clic sur la même opp est gratuit (cache hit).
+- [ ] **Tester le funnel complet** avec ton vrai email perso :
+  1. Register sur https://funding-watch-morocco.vercel.app/register
+  2. Vérifier réception du welcome email (check spam)
+  3. Compléter onboarding (2-3 thèmes, 1 SDG, 1 zone géo)
+  4. Vérifier réception du first-matches email
+  5. Tester widget feedback flottant
+  6. Tester co-soumission sur une opp
+  7. Tester l'UI experts marketplace (placeholders)
+  8. Vérifier `/admin/feedback` (en admin)
+  Documenter les bugs trouvés → driver du prochain sprint code.
 
-- [ ] **Recharger le crédit Anthropic** sur https://console.anthropic.com/settings/billing
-  — La clé `ANTHROPIC_API_KEY` renvoie `invalid_request_error: credit balance too low`
-  → la classification taxonomique des nouvelles opps, l'AI co-writer (résumé exécutif)
-  et le document intelligence (auto-complétion profil depuis texte) renvoient tous
-  une erreur. Le code surface un message `no_credit` explicite à l'utilisateur.
+---
 
-- [x] ~~Recharger le quota OpenAI~~ — fait le 2026-05-15. Tous les opps + orgs
-  re-embeddés via `openai/text-embedding-3-small`, matching sémantique opérationnel.
+## 🟠 Important avant lancement public
 
-- [ ] **Nettoyer les fixtures de test E2E** créées le 2026-05-15 :
+### Observabilité
+
+- [ ] **Créer compte Sentry** sur https://sentry.io (free tier 5k events/mois).
+  Projet "funding-watch-morocco" type Next.js. DSN dans Vercel comme
+  `NEXT_PUBLIC_SENTRY_DSN` ET `SENTRY_DSN`. Optionnel :
+  `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` pour source-maps.
+
+- [ ] **Créer compte Plausible** sur https://plausible.io (9€/mois starter)
+  OU self-host gratuit. Variable Vercel
+  `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=funding-watch-morocco.vercel.app`.
+
+- [ ] **Définir les Goals Plausible** une fois configuré :
+  `signup_completed`, `feedback_sent`, `onboarding_completed`,
+  `co_submit_interest`, `expert_request_sent`, `theme_suggestion_sent`.
+
+### Recrutement humain
+
+- [ ] **Recruter 3-5 vrais beta-testeurs** (mix easy / hard mode).
+  Sans utilisateurs, la plateforme reste du vapeur. Sourcing LinkedIn /
+  WhatsApp / réseau ANSI. Format DM perso, pas mail générique.
+
+- [ ] **Recruter 5-10 vrais experts** pour remplacer les 6 placeholders.
+  Cibles : anciens program officers AFD/UE/UNDP, juristes OSBL,
+  formateurs réseau ANSI, évaluateurs indépendants. Workflow : créer
+  profil dans `/admin/experts` avec status='active', le badge "EXEMPLE"
+  disparaît automatiquement.
+
+### Contenu manquant
+
+- [ ] **Page `/about` honnête** — qui tu es (vrai nom, vrai parcours),
+  pourquoi tu construis ça, état actuel (bêta privée), contact direct.
+
+- [ ] **Page `/pricing` honnête** — modèle économique transparent même
+  si "à définir". Mieux qu'un placeholder.
+
+- [ ] **Pages légales** (Sprint 5B en cours) :
+  - `/privacy` — politique de confidentialité
+  - `/terms` — conditions générales d'utilisation
+  - `/cookies` — politique cookies
+  - `/legal` — mentions légales (à compléter avec tes infos perso)
+
+### Data quality
+
+- [ ] **Reclassifier les opps existantes** avec la taxonomie v24 étendue.
+  Opps publiées avant 2026-05-19 n'ont pas les 9 nouveaux tags. Coût
+  ~$0.01/100 opps via Haiku 4.5.
+
+- [ ] **Améliorer la qualité de scraping** : 2/3 opportunités actuelles
+  n'ont pas de `summary`/`description` exploitable. Inspecter les
+  sélecteurs des sources concernées.
+
+- [ ] **Reclasser `ngo_relevant`** sur les 3 opportunités actuelles à
+  `NULL` (invisibles au matching). Via `/admin/pending` ou batch SQL.
+
+- [ ] **Nettoyer fixtures de test E2E** créées le 2026-05-15 :
   ```sql
   delete from organizations where id = '313fe86d-470c-4e57-abde-cc0826691d7d';
   delete from opportunities where external_id = 'test-e2e-fwm-fixture';
   -- supprimer aussi le user test-e2e-fwm@test.local via Supabase Auth UI
   ```
 
-- [ ] **Reclasser ngo_relevant** sur les 3 opportunités existantes
-  ("Achat plants d'olivier" et "Creative Hubs" sont à `ngo_relevant=NULL` →
-  invisibles au matching). Décider via `/admin/pending` ou batch SQL.
-
-- [ ] **Recruter 5 partenaires bêta** pour remplacer les placeholders
-  `BETA_PARTNERS` dans `app/page.jsx` (cf. AUDIT §3.4 — Faiblesse #4).
-
----
-
-## 🔵 Observabilité bêta (Sprint 4N)
-
-- [ ] **Créer compte Sentry** sur https://sentry.io (free tier 5k events/mois).
-  Créer un projet "funding-watch-morocco" type Next.js. Récupérer le DSN
-  et l'ajouter dans Vercel comme `NEXT_PUBLIC_SENTRY_DSN` (visible côté
-  client) ET `SENTRY_DSN` (côté serveur). Optionnel pour source-maps :
-  `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT`. Sans ces vars,
-  tout est no-op (zéro overhead).
-
-- [ ] **Créer compte Plausible** sur https://plausible.io (9€/mois starter)
-  OU self-host gratuit. Ajouter le domaine de prod, puis configurer la
-  variable Vercel `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=funding-watch-morocco.vercel.app`
-  (ou ton custom domain). Si self-host : aussi `NEXT_PUBLIC_PLAUSIBLE_SRC`.
-  Sans cette variable, aucun script tracker n'est injecté.
-
-- [ ] **Définir le funnel critique** dans Plausible dashboard une fois
-  configuré : Goals → Custom event → `signup_completed`, `feedback_sent`,
-  `onboarding_completed` (à wire-up dans completeOnboarding si besoin).
-
----
-
-## 🟡 Important avant bêta
-
-- [ ] **BREVO_API_KEY** : sans cette clé `sendEmail()` simule les envois
-  (warning `[email] BREVO_API_KEY manquant — email simulé`). Aucun email
-  réel n'est envoyé. Le digest matin restera muet tant qu'elle n'est pas
-  configurée sur Vercel + GitHub Actions secrets.
+### Sécurité
 
 - [ ] **Régénérer la `SUPABASE_SERVICE_ROLE_KEY`** par précaution
-  (elle était en clair dans un commit local non poussé, GitHub l'a bloquée
-  au push initial — n'a jamais fuité publiquement, mais autant la roter).
-
-- [ ] **Améliorer la qualité de scraping** : 2/3 opportunités actuelles n'ont
-  pas de `summary`/`description` exploitable (Claude ne peut pas les
-  classifier). Inspecter pourquoi le crawler ne récupère pas le contenu sur
-  ces sources et améliorer les sélecteurs.
+  (elle était en clair dans un commit local non poussé, GitHub l'a
+  bloquée au push initial — n'a jamais fuité publiquement, mais autant
+  la roter).
 
 ---
 
-## 🟢 Améliorations post-bêta
+## 🟡 Polish & croissance (post-bêta)
 
-- [ ] Sprint 3b — Probabilité de réussite (modèle naïf sur outcomes)
-- [ ] Sprint 3c — WhatsApp Business alerts (matches >90%)
-- [ ] Sprint 4 — Comptes équipe (rôles admin/contributeur/viewer)
-- [ ] Dashboard ops admin (monitoring sources / taux d'extraction / coût Claude)
+- [ ] **Sprint 5C — Page opp simplifiée** : appliquer "delete first" à
+  `/opportunities/[id]` (8 sections aside → 3 + accordion).
+
+- [ ] **Sprint 5D — Onboarding 3 étapes** : `OnboardingWizard.jsx`
+  passe de 654 lignes à ~150. SDG/DAC/géographies → différés en profil.
+
+- [ ] **Sprint 5E — `/api/health` + smoke tests** : endpoint health
+  + script `npm run smoke` qui call les routes critiques.
+
+- [ ] **Sprint 5F — Refonte palette** : 7 couleurs sémantiques → 4
+  (rouge brand, vert success, ambre warning, slate neutral).
+
+- [ ] **Sprint 3c — WhatsApp Business alerts** (matches >90%).
+
+- [ ] **Sprint 4 — Comptes équipe** (UI à activer puisque v10 appliquée).
+
+- [ ] **Dashboard admin ops** étoffé (taux extraction, coût Claude réel).
+
+- [ ] **Cookie banner GDPR** si visiteurs EU.
 
 ---
 
-## ✅ Récemment fait (à dater)
+## ✅ Récemment fait
 
-- 2026-05-19 — Sprint 4G : document intelligence upload PDF/TXT/MD via
-  `/api/ai/extract-document` (unpdf côté serveur, Claude Haiku 4.5,
-  logUsage tracké). Pas de Storage persistant : parsé en mémoire, jamais écrit.
-- 2026-05-19 — Sprint 4F : recommandation collaborative anonymisée (RPC v21)
-- 2026-05-18 — Sprint 4E : donor intelligence prédictive (RPC v20)
+- 2026-06-01 — Sprint 5A.5 : nav purgée (Actualités / Ressources / Insights / Formations retirés)
+- 2026-06-01 — Sprint 5A : dashboard minimaliste (12 → 3 sections + accordion, -42% bundle)
+- 2026-05-31 — Sprint 4P : co-soumission matchmaking (v27)
+- 2026-05-31 — Sprint 6 (Cowork) : Strict Morocco NGO targeting (v23)
+- 2026-05-31 — Sprint 6 (Cowork) : Manual curation assisted by Claude (v25)
+- 2026-05-31 — Sprint 4Q : experts marketplace + 6 profils placeholder (v26)
+- 2026-05-31 — Sprint 4O : thématiques étendues (v24)
+- 2026-05-20 — Sprint 4N : Sentry + Plausible env-gated
+- 2026-05-20 — Sprint 4M : passage bêta — feedback widget + BETA pill (v22)
+- 2026-05-20 — Sprint 4L : welcome email + first-matches email
+- 2026-05-20 — Sprint 4K : OG image dynamique + sitemap + skeleton
+- 2026-05-19 — Sprint 4I : de-fakening dashboard
+- 2026-05-19 — Sprint 4J : de-fakening landing
+- 2026-05-19 — Sprint 4H : success probability TopMatches
+- 2026-05-19 — Sprint 4G : document intelligence upload PDF (`/api/ai/extract-document`)
+- 2026-05-19 — Sprint 4F : recommandation collaborative (v21)
+- 2026-05-18 — Sprint 4E : donor intelligence prédictive (v20)
 - 2026-05-18 — Sprint 4C : timeline deadlines + modal match parfait
-- 2026-05-18 — Sprint 4B : recherche sémantique multilingue FR/AR/EN
+- 2026-05-18 — Sprint 4B : recherche sémantique multilingue FR/AR/EN (v19)
+- 2026-05-18 — Sprint 4A : beta hardening — onboarding embed + api_usage_logs (v18)
+- 2026-05-18 — Sprint 2B.3 : Brevo webhook tracking (v17)
 - 2026-05-15 — Sprint 3a : donor intelligence sur la page opportunité
-- 2026-05-15 — Test e2e matching validé (score 45 sur opp test, fallback path OK)
-- 2026-05-15 — Migration v8 : RPC `match_opportunities_for_org` opérationnelle
+- 2026-05-15 — Backfill donneurs : 27/27 embeddings (Cowork)
+- 2026-05-15 — Recharge quota OpenAI : tous les opps + orgs re-embeddés
 - 2026-05-14 — Sprint 2 livré (Kanban, AI co-writer, digest matin, mobile, trust signals)
 - 2026-05-14 — Sprint 1 déployé en prod (migrations v4 + seed taxonomies + sources v3)
