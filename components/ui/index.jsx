@@ -1,16 +1,28 @@
 'use client';
 import { cn } from '@/lib/utils';
 
-/* ── Badge ── */
+/* ── Badge ──
+   Sprint 5F — palette resserrée à 4 teintes canoniques pour réduire le bruit
+   visuel ("sapin de Noël"). Les anciens noms (gold/red/orange/purple) restent
+   acceptés comme alias mais ne rendent plus que l'une des 4 couleurs réelles :
+     • brand (rouge)  → urgence / emphase   (ex-red, ex-orange)
+     • blue           → info / data         (ex-purple)
+     • green          → succès / éligible
+     • slate          → neutre / inconnu    (ex-gold) */
 export function Badge({ children, tone = 'blue', className }) {
-  const tones = {
+  const CANON = {
+    brand: 'bg-red-50 text-red-700 ring-red-200',
     blue: 'bg-blue-50 text-blue-700 ring-blue-200',
-    gold: 'bg-amber-50 text-amber-700 ring-amber-200',
     green: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    red: 'bg-red-50 text-red-700 ring-red-200',
     slate: 'bg-slate-100 text-slate-600 ring-slate-200',
-    purple: 'bg-purple-50 text-purple-700 ring-purple-200',
-    orange: 'bg-orange-50 text-orange-700 ring-orange-200',
+  };
+  const tones = {
+    ...CANON,
+    // alias rétro-compat → teinte canonique
+    red: CANON.brand,
+    orange: CANON.brand,
+    gold: CANON.slate,
+    purple: CANON.blue,
   };
   return (
     <span

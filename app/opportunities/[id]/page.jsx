@@ -169,7 +169,7 @@ export default async function OpportunityDetailPage({ params }) {
           {/* ═══════════════════ HERO ═══════════════════ */}
           <Card className="mt-6">
             <div className="flex flex-wrap gap-2">
-              {status === 'urgent' && <Badge tone="orange">🔥 Urgent — {days}j</Badge>}
+              {status === 'urgent' && <Badge tone="brand">🔥 Urgent — {days}j</Badge>}
               {status === 'expired' && <Badge tone="slate">Expiré</Badge>}
               {opp.morocco_eligibility === 'explicit' && <Badge tone="green">🇲🇦 Maroc éligible</Badge>}
               {opp.morocco_eligibility === 'regional' && <Badge tone="blue">🌍 Région MENA/Afrique</Badge>}

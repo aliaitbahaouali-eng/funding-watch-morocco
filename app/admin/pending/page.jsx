@@ -49,8 +49,8 @@ export default async function PendingPage() {
                     {o.sources?.name && <Badge tone="blue">source: {o.sources.name}</Badge>}
                     {o.morocco_eligible && <Badge tone="green">🇲🇦</Badge>}
                     {o.ngo_relevant === true && <Badge tone="green">✓ ONG fit {o.ngo_relevance_score ? `· ${o.ngo_relevance_score}` : ''}</Badge>}
-                    {o.ngo_relevant === false && <Badge tone="red">✖ Non ONG {o.ngo_relevance_score ? `· ${o.ngo_relevance_score}` : ''}</Badge>}
-                    {o.ngo_relevant === null && <Badge tone="gold">? Non classé</Badge>}
+                    {o.ngo_relevant === false && <Badge tone="brand">✖ Non ONG {o.ngo_relevance_score ? `· ${o.ngo_relevance_score}` : ''}</Badge>}
+                    {o.ngo_relevant === null && <Badge tone="slate">? Non classé</Badge>}
                   </div>
                   <Link href={`/admin/opportunities/${o.id}`} className="mt-2 block font-bold hover:text-primary">{o.title}</Link>
                   <p className="text-xs text-slate-500">{o.donors?.name || '—'} · Deadline {formatDate(o.deadline)} · <a href={o.official_url} target="_blank" rel="noopener" className="text-primary hover:underline">Lien officiel ↗</a></p>
