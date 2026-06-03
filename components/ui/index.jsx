@@ -66,7 +66,7 @@ export function SectionTitle({ eyebrow, title, text, center }) {
 /* ── Button ── */
 export function Button({ children, variant = 'primary', size = 'md', className, ...props }) {
   const variants = {
-    primary: 'bg-primary text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-primary',
+    primary: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-600',
     secondary: 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     ghost: 'text-slate-600 hover:bg-slate-100',
