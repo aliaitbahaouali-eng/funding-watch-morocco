@@ -157,78 +157,184 @@ export default async function OpportunityDetailPage({ params }) {
   const status = opportunityStatus(opp.deadline, opp.status);
   const days = daysUntil(opp.deadline);
 
+  const themeBadges = (opp.opportunity_themes || []).filter(t => t.themes?.name_fr);
+
   return (
     <main>
       <Header />
       <section className="bg-slate-50 py-10">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <a href="/opportunities" className="text-sm font-bold text-slate-500 hover:text-primary">← Toutes les opportunités</a>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
-              <Card>
-                <div className="flex flex-wrap gap-2">
-                  {status === 'urgent' && <Badge tone="orange">🔥 Urgent — {days}j</Badge>}
-                  {status === 'expired' && <Badge tone="slate">Expiré</Badge>}
-                  {opp.morocco_eligibility === 'explicit' && <Badge tone="green">🇲🇦 Maroc éligible</Badge>}
-                  {opp.morocco_eligibility === 'regional' && <Badge tone="blue">🌍 Région MENA/Afrique</Badge>}
-                  {opp.morocco_eligibility === 'global' && <Badge tone="slate">🌐 Appel global</Badge>}
-                  {opp.verified && <Badge tone="blue">✓ Vérifié</Badge>}
-                  {opp.type && <Badge tone="slate">{opp.type}</Badge>}
-                </div>
-                {opp.donors?.name && (
-                  <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary">{opp.donors.name}</p>
-                )}
-                <h1 className="mt-2 text-3xl font-black leading-tight lg:text-4xl">{opp.title}</h1>
-                {opp.summary && <p className="mt-4 text-lg leading-7 text-slate-600">{opp.summary}</p>}
+          {/* ═══════════════════ HERO ═══════════════════ */}
+          <Card className="mt-6">
+            <div className="flex flex-wrap gap-2">
+              {status === 'urgent' && <Badge tone="orange">🔥 Urgent — {days}j</Badge>}
+              {status === 'expired' && <Badge tone="slate">Expiré</Badge>}
+              {opp.morocco_eligibility === 'explicit' && <Badge tone="green">🇲🇦 Maroc éligible</Badge>}
+              {opp.morocco_eligibility === 'regional' && <Badge tone="blue">🌍 Région MENA/Afrique</Badge>}
+              {opp.morocco_eligibility === 'global' && <Badge tone="slate">🌐 Appel global</Badge>}
+              {opp.verified && <Badge tone="blue">✓ Vérifié</Badge>}
+            </div>
+            {opp.donors?.name && (
+              <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary">{opp.donors.name}</p>
+            )}
+            <h1 className="mt-2 text-3xl font-black leading-tight lg:text-4xl">{opp.title}</h1>
+            {opp.summary && <p className="mt-4 text-lg leading-7 text-slate-600">{opp.summary}</p>}
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-500">Deadline</p>
-                    <p className="mt-1 font-black text-slate-950">{formatDate(opp.deadline)}</p>
-                    {days !== null && <p className="text-xs text-slate-500">{days >= 0 ? `Dans ${days} jours` : 'Échue'}</p>}
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-500">Montant</p>
-                    <p className="mt-1 font-black text-slate-950">{formatAmount(opp)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-500">Difficulté</p>
-                    <p className="mt-1 font-black text-slate-950">{opp.difficulty_level || '—'}</p>
+            {/* Faits clés */}
+            <div className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-3">
+              <div>
+                <p className="text-xs font-bold uppercase text-slate-500">Deadline</p>
+                <p className="mt-1 font-black text-slate-950">{formatDate(opp.deadline)}</p>
+                {days !== null && <p className="text-xs text-slate-500">{days >= 0 ? `Dans ${days} jours` : 'Échue'}</p>}
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase text-slate-500">Montant</p>
+                <p className="mt-1 font-black text-slate-950">{formatAmount(opp)}</p>
+              </div>
+              {scoring ? (
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-500">Votre compatibilité</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Score value={scoring.score} size="sm" />
+                    <span className="text-sm font-black">{scoreTier(scoring.score).label}</span>
                   </div>
                 </div>
-              </Card>
+              ) : (
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-500">Difficulté</p>
+                  <p className="mt-1 font-black text-slate-950">{opp.difficulty_level || '—'}</p>
+                </div>
+              )}
+            </div>
 
+            {/* Actions primaires */}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              {user && org ? (
+                <SaveButton opportunityId={opp.id} initiallySaved={alreadySaved} />
+              ) : (
+                <a href={`/login?redirect=/opportunities/${opp.id}`} className="flex-1 rounded-full bg-primary px-5 py-3 text-center text-sm font-bold text-white">Connectez-vous pour sauvegarder</a>
+              )}
+              <a href={opp.official_url} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-full border border-slate-200 px-5 py-3 text-center text-sm font-bold text-primary">
+                Voir l'appel officiel ↗
+              </a>
+            </div>
+
+            {/* Thématiques inline */}
+            {themeBadges.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {themeBadges.map(t => <Badge key={t.theme_id} tone="blue">{t.themes?.name_fr}</Badge>)}
+              </div>
+            )}
+          </Card>
+
+          {/* ═══════════════════ DÉTAILS DE L'APPEL ═══════════════════ */}
+          {(opp.description || opp.eligibility || opp.required_documents?.length > 0) && (
+            <Card className="mt-6">
               {opp.description && (
-                <Card>
+                <>
                   <h2 className="text-xl font-black">Description</h2>
                   <p className="mt-3 whitespace-pre-line leading-7 text-slate-700">{opp.description}</p>
-                </Card>
+                </>
               )}
-
               {opp.eligibility && (
-                <Card>
-                  <h2 className="text-xl font-black">Critères d'éligibilité</h2>
+                <>
+                  <h2 className="mt-8 text-xl font-black">Critères d'éligibilité</h2>
                   <p className="mt-3 whitespace-pre-line leading-7 text-slate-700">{opp.eligibility}</p>
-                </Card>
+                </>
               )}
-
               {opp.required_documents?.length > 0 && (
-                <Card>
-                  <h2 className="text-xl font-black">Documents requis</h2>
+                <>
+                  <h2 className="mt-8 text-xl font-black">Documents requis</h2>
                   <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
                     {opp.required_documents.map((d, i) => <li key={i}>{d}</li>)}
                   </ul>
-                </Card>
+                </>
               )}
+            </Card>
+          )}
 
-              {opp.donor_id && (
-                <DonorIntelligence donorId={opp.donor_id} currentOpportunityId={opp.id} />
-              )}
+          {/* ═══════════════════ AI CO-WRITER (action centrale) ═══════════════════ */}
+          {user && org && (
+            <Card className="mt-6">
+              <AiCoWriter opportunityId={opp.id} />
+            </Card>
+          )}
 
-              <Card>
-                <h2 className="text-xl font-black">Checklist candidature</h2>
-                <ul className="mt-3 space-y-2">
+          {/* ═══════════════════ SECONDAIRE — accordéons repliés ═══════════════════ */}
+          <div className="mt-6 space-y-3">
+            {/* Co-soumission */}
+            {user && org && (
+              <details className="group rounded-2xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                  <span>🤝 Co-soumission {coSubmitPeersCount > 0 && <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">{coSubmitPeersCount}</span>}</span>
+                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+                </summary>
+                <div className="border-t border-slate-100 p-5">
+                  <CoSubmissionPanel
+                    oppId={opp.id}
+                    isOwnerOptIn={org._coSubmitOptIn}
+                    ownerMessage={org._coSubmitMessage}
+                    peers={coSubmitPeers}
+                    peersCount={coSubmitPeersCount}
+                  />
+                </div>
+              </details>
+            )}
+
+            {/* Experts */}
+            <details className="group rounded-2xl border border-slate-200 bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                <span>💼 Experts pour vous accompagner</span>
+                <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+              </summary>
+              <div className="border-t border-slate-100 p-5">
+                <ExpertsForOpp opp={opp} />
+              </div>
+            </details>
+
+            {/* Probabilité de réussite */}
+            {user && org && (
+              <details className="group rounded-2xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                  <span>📊 Probabilité de réussite & détail du score</span>
+                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+                </summary>
+                <div className="space-y-4 border-t border-slate-100 p-5">
+                  <SuccessProbability org={org} opp={opp} />
+                  {scoring && (
+                    <ul className="space-y-1 text-xs text-slate-600">
+                      {Object.entries(scoring.breakdown).map(([k, v]) => (
+                        <li key={k} className="flex justify-between"><span>{k}</span><span className="font-bold">+{v}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* Le bailleur en détail */}
+            {opp.donor_id && (
+              <details className="group rounded-2xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                  <span>🔭 Le bailleur en détail</span>
+                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+                </summary>
+                <div className="border-t border-slate-100 p-5">
+                  <DonorIntelligence donorId={opp.donor_id} currentOpportunityId={opp.id} />
+                </div>
+              </details>
+            )}
+
+            {/* Checklist de préparation */}
+            <details className="group rounded-2xl border border-slate-200 bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                <span>✅ Checklist de préparation</span>
+                <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+              </summary>
+              <div className="border-t border-slate-100 p-5">
+                <ul className="space-y-2">
                   {checklist.map((step, i) => (
                     <li key={i} className="flex gap-3 text-slate-700">
                       <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">{i + 1}</span>
@@ -236,80 +342,33 @@ export default async function OpportunityDetailPage({ params }) {
                     </li>
                   ))}
                 </ul>
-              </Card>
-            </div>
+              </div>
+            </details>
 
-            <aside className="space-y-6">
-              {user && org && (
-                <SuccessProbability org={org} opp={opp} />
-              )}
-
-              {/* Sprint 4P — Co-soumission */}
-              {user && org && (
-                <CoSubmissionPanel
-                  oppId={opp.id}
-                  isOwnerOptIn={org._coSubmitOptIn}
-                  ownerMessage={org._coSubmitMessage}
-                  peers={coSubmitPeers}
-                  peersCount={coSubmitPeersCount}
-                />
-              )}
-
-              {/* Sprint 4Q — Experts marketplace */}
-              <ExpertsForOpp opp={opp} />
-
-              {scoring && (
-                <Card>
-                  <p className="text-xs font-bold uppercase text-slate-500">Score de compatibilité</p>
-                  <div className="mt-3 flex items-center gap-4">
-                    <Score value={scoring.score} size="md" />
-                    <div>
-                      <p className="text-sm font-black">{scoreTier(scoring.score).label}</p>
-                      <p className="text-xs text-slate-500">basé sur votre profil</p>
+            {/* Infos complémentaires */}
+            {(opp.countries_eligible?.length > 0 || opp.type) && (
+              <details className="group rounded-2xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-black">
+                  <span>ℹ️ Pays éligibles & type d'appel</span>
+                  <span className="text-slate-400 transition group-open:rotate-180">▾</span>
+                </summary>
+                <div className="space-y-4 border-t border-slate-100 p-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-slate-500">Pays éligibles</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(opp.countries_eligible || []).map(c => <Badge key={c} tone="slate">{c}</Badge>)}
+                      {(!opp.countries_eligible || opp.countries_eligible.length === 0) && <span className="text-sm text-slate-500">Non spécifié</span>}
                     </div>
                   </div>
-                  <ul className="mt-4 space-y-1 text-xs text-slate-600">
-                    {Object.entries(scoring.breakdown).map(([k, v]) => (
-                      <li key={k} className="flex justify-between"><span>{k}</span><span className="font-bold">+{v}</span></li>
-                    ))}
-                  </ul>
-                </Card>
-              )}
-
-              <Card>
-                <p className="text-xs font-bold uppercase text-slate-500">Pays éligibles</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(opp.countries_eligible || []).map(c => <Badge key={c} tone="slate">{c}</Badge>)}
-                  {(!opp.countries_eligible || opp.countries_eligible.length === 0) && <span className="text-sm text-slate-500">Non spécifié</span>}
-                </div>
-              </Card>
-
-              <Card>
-                <p className="text-xs font-bold uppercase text-slate-500">Thématiques</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(opp.opportunity_themes || []).map(t => <Badge key={t.theme_id} tone="blue">{t.themes?.name_fr}</Badge>)}
-                </div>
-              </Card>
-
-              <Card>
-                <div className="space-y-3">
-                  {user && org ? (
-                    <SaveButton opportunityId={opp.id} initiallySaved={alreadySaved} />
-                  ) : (
-                    <a href={`/login?redirect=/opportunities/${opp.id}`} className="block w-full rounded-full bg-primary px-5 py-3 text-center text-sm font-bold text-white">Connectez-vous pour sauvegarder</a>
+                  {opp.type && (
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-500">Type d'appel</p>
+                      <div className="mt-2"><Badge tone="slate">{opp.type}</Badge></div>
+                    </div>
                   )}
-                  <a href={opp.official_url} target="_blank" rel="noopener noreferrer" className="block w-full rounded-full border border-slate-200 px-5 py-3 text-center text-sm font-bold text-primary">
-                    Voir l'appel officiel ↗
-                  </a>
                 </div>
-              </Card>
-
-              {user && org && (
-                <Card>
-                  <AiCoWriter opportunityId={opp.id} />
-                </Card>
-              )}
-            </aside>
+              </details>
+            )}
           </div>
         </div>
       </section>
