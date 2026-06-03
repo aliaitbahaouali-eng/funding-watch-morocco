@@ -23,11 +23,10 @@ export default async function sitemap() {
     { url: '/contact', changeFrequency: 'monthly', priority: 0.4 },
     { url: '/register', changeFrequency: 'monthly', priority: 0.8 },
     { url: '/login', changeFrequency: 'monthly', priority: 0.4 },
-    { url: '/resources', changeFrequency: 'weekly', priority: 0.5 },
-    { url: '/news', changeFrequency: 'weekly', priority: 0.5 },
-    { url: '/training', changeFrequency: 'monthly', priority: 0.4 },
+    // Sprint 5A.5 — /news /resources /insights /training retirés du sitemap
+    // (pages placeholder peu actionables). Routes encore accessibles directement
+    // mais plus indexées ni linkées depuis la nav.
     { url: '/community', changeFrequency: 'weekly', priority: 0.4 },
-    { url: '/insights', changeFrequency: 'weekly', priority: 0.6 },
   ].map((p) => ({
     url: `${APP_URL}${p.url}`,
     lastModified: new Date(),

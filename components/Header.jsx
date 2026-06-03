@@ -5,12 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import LiveBadge from '@/components/premium/LiveBadge';
 
+// Sprint 5A.5 — Nav réduite : on retire Actualités / Ressources / Insights
+// (placeholders peu actionables). Restent les pages avec vraie valeur produit.
 const NAV = [
   { href: '/opportunities', label: 'Opportunités' },
   { href: '/themes', label: 'Thématiques' },
-  { href: '/news', label: 'Actualités' },
-  { href: '/resources', label: 'Ressources' },
-  { href: '/insights', label: 'Insights' },
   { href: '/community', label: 'Communauté' }
 ];
 

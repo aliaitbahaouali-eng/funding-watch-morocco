@@ -1,17 +1,13 @@
 import Link from 'next/link';
 import NewsletterForm from '@/components/premium/NewsletterForm';
 
+// Sprint 5A.5 — Footer purgé : retiré Insights, Actualités, Ressources,
+// Formations (pages placeholder peu actionables).
 const COLS = [
   { title: 'Plateforme', links: [
     { href: '/opportunities', label: 'Opportunités' },
     { href: '/themes', label: 'Thématiques' },
     { href: '/calendar', label: 'Calendrier financement' },
-    { href: '/insights', label: 'Insights & Data' }
-  ]},
-  { title: 'Communauté', links: [
-    { href: '/news', label: 'Actualités' },
-    { href: '/resources', label: 'Centre de ressources' },
-    { href: '/training', label: 'Formations' },
     { href: '/community', label: 'Communauté' }
   ]},
   { title: 'Produit', links: [
@@ -47,7 +43,7 @@ export default function Footer() {
           <NewsletterForm />
         </div>
 
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-grad-brand font-black text-white">F</div>

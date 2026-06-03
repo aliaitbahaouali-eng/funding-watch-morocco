@@ -8,10 +8,7 @@ const STATIC_RESULTS = [
   { type: 'page', icon: '🎯', title: 'Opportunités',         hint: 'Toutes les opportunités',  href: '/opportunities',keywords: 'opportunities appels projets calls' },
   { type: 'page', icon: '🏷️', title: 'Thématiques',         hint: 'Tous les domaines',        href: '/themes',       keywords: 'themes secteurs categories' },
   { type: 'page', icon: '📅', title: 'Calendrier financement', hint: 'Vue calendaire',         href: '/calendar',     keywords: 'calendar deadline planning' },
-  { type: 'page', icon: '📰', title: 'Actualités',           hint: 'News bailleurs',           href: '/news',         keywords: 'news actu actualites blog' },
-  { type: 'page', icon: '📚', title: 'Ressources',           hint: 'Templates & guides',       href: '/resources',    keywords: 'resources templates guides outils' },
-  { type: 'page', icon: '🎓', title: 'Formations',           hint: 'Modules de formation',     href: '/training',     keywords: 'training cours formations webinaires' },
-  { type: 'page', icon: '📊', title: 'Insights & Data',      hint: 'Analytics financement',    href: '/insights',     keywords: 'insights analytics data stats' },
+  // Sprint 5A.5 — retiré Actualités / Ressources / Formations / Insights du Command-K
   { type: 'page', icon: '👥', title: 'Communauté',           hint: 'Experts et réseau',        href: '/community',    keywords: 'community experts network' },
   { type: 'page', icon: '📈', title: 'Mon dashboard',         hint: 'Espace association',       href: '/dashboard',    keywords: 'dashboard espace assoc' },
   { type: 'page', icon: '🛡️', title: 'Admin',                hint: 'Back-office',              href: '/admin',        keywords: 'admin backoffice' },
